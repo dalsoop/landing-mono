@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PAGES_PROJECT: landing-mono
+  WORKER_NAME: landing-mono
   ROOT_DOMAIN: external.kr
 
 jobs:
@@ -22,6 +22,9 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: check secrets
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
@@ -29,11 +32,10 @@ jobs:
             exit 1
           fi
       - name: build
-        id: build
         run: |
           set -euo pipefail
           rm -rf dist && mkdir dist
-          sites=""
+          routes="[]"
           for dir in apps/*/; do
             site=$(basename "$dir")
             if ! echo "$site" | grep -Eq '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'; then
@@ -45,37 +47,16 @@ jobs:
               exit 1
             fi
             cp -R "$dir" "dist/$site"
-            sites="$sites $site"
+            routes=$(echo "$routes" | jq -c --arg p "$site.$ROOT_DOMAIN/*" --arg z "$ROOT_DOMAIN" '. + [{pattern: $p, zone_name: $z}]')
+            echo "사이트: https://$site.$ROOT_DOMAIN"
           done
-          cp router/_worker.js dist/_worker.js
-          echo "sites=$sites" >> "$GITHUB_OUTPUT"
-          echo "배포할 사이트:$sites"
-      - name: ensure Pages project
-        run: |
-          set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
-          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$PAGES_PROJECT")
-          if [ "$code" = "404" ]; then
-            npx --yes wrangler@3 pages project create "$PAGES_PROJECT" --production-branch main
-          elif [ "$code" != "200" ]; then
-            echo "::error::Pages 프로젝트 조회 실패: HTTP $code"; exit 1
-          fi
+          jq -n --arg name "$WORKER_NAME" --argjson routes "$routes" '{
+            name: $name,
+            main: "router/worker.js",
+            compatibility_date: "2025-09-01",
+            assets: { directory: "dist", binding: "ASSETS", run_worker_first: true },
+            routes: $routes
+          }' > wrangler.json
+          cat wrangler.json
       - name: deploy
-        run: npx --yes wrangler@3 pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true
-      - name: attach domains
-        env:
-          SITES: ${{ steps.build.outputs.sites }}
-        run: |
-          set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT/domains"
-          have=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" | jq -r '.result[]?.name')
-          for site in $SITES; do
-            domain="$site.$ROOT_DOMAIN"
-            if echo "$have" | grep -qx "$domain"; then
-              echo "연결됨: https://$domain"
-            else
-              curl -sf -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
-                --data "{\"name\":\"$domain\"}" "$api" > /dev/null
-              echo "새로 연결: https://$domain"
-            fi
-          done
+        run: npx --yes wrangler@4 deploy --config wrangler.json
