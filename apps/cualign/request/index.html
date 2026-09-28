@@ -22,6 +22,8 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
   <link rel="stylesheet" href="/styles.css">
   <style>
+    /* The page must not depend on the landing stylesheet for this: its classes set display, which beats [hidden]. */
+    [hidden] { display: none !important; }
     .rq-nav { border-bottom: 1px solid var(--line); }
     .rq-nav .container { height: var(--nav-h); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .rq-nav .brand img { width: 120px; height: auto; }
@@ -30,12 +32,10 @@
     .rq { padding-block: clamp(40px, 7vw, 88px) 72px; }
     .rq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: clamp(32px, 6vw, 72px); align-items: start; }
     .rq-intro { display: grid; gap: 18px; }
-    .rq-intro .eyebrow { justify-self: start; }
     .rq-intro h1 { font-size: clamp(32px, 4.4vw, 48px); }
     .rq-intro .lead { color: var(--text-2); font-size: 17px; }
     .rq-note { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px; color: var(--text-2); font-size: 14px; display: grid; gap: 6px; }
     .rq-note strong { color: var(--text); font-weight: 600; }
-    .rq-note.lang { border-color: var(--accent-line); background: var(--accent-soft); }
     .rq-card { border: 1px solid var(--line); background: var(--bg-alt); border-radius: var(--radius); padding: clamp(20px, 3.5vw, 32px); }
     .rq-form { display: grid; gap: 20px; }
     .rq-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -97,16 +97,11 @@
   <main id="main" class="rq">
     <div class="container rq-grid">
       <div class="rq-intro">
-        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Research prototype</p>
         <h1>Request a demo</h1>
         <p class="lead">The hosted prototype needs login details. We send them by email after we review your request.</p>
-        <div class="rq-note lang">
-          <strong>The prototype is in Korean.</strong>
-          <span>Its screens and the agent's answers are written in Korean.</span>
-        </div>
         <div class="rq-note">
           <strong>Not for clinical use.</strong>
-          <span>cuAlign drafts clear aligner staging plans for research. A dentist reviews every stage; the drafts are not treatment advice.</span>
+          <span>cuAlign drafts clear aligner staging plans for research. A dentist reviews every stage. The drafts are not treatment advice.</span>
         </div>
       </div>
 
