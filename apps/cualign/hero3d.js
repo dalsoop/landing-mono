@@ -22,7 +22,7 @@ function geometry(part) {
   return g;
 }
 
-export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
+export async function mountHero({ stage, canvas, hud, dataUrl, touch, parallaxRoot }) {
   const res = await fetch(dataUrl);
   if (!res.ok) throw new Error(`hero data ${res.status}`);
   const data = await res.json();
@@ -116,17 +116,19 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
     camera.aspect = aspect;
     const vfov = (camera.fov * Math.PI) / 180;
     const fit = radius / Math.sin(Math.min(vfov, 2 * Math.atan(Math.tan(vfov / 2) * aspect)) / 2);
-    camera.position.set(0, 0, fit * (aspect < 1.3 ? 0.8 : 1.0));   // the bounding sphere is loose; tighten on narrow screens
+    camera.position.set(0, 0, fit * (aspect < 1.3 ? 0.7 : 0.9));   // the bounding sphere is loose; tighten on narrow screens
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }
   new ResizeObserver(resize).observe(canvas);
   resize();
 
-  // Timeline, auto-rotation, drag and scroll tilt.
+  // Timeline, auto-rotation, drag, pointer parallax and scroll tilt.
   const BASE_PITCH = 0.62;
-  let clock = 0, prev = performance.now(), hovering = false, dragging = null;
+  let clock = 0, prev = performance.now(), dragging = null;
   let dragYaw = 0, dragPitch = 0, spin = 0, visible = true, raf = 0;
+  // Parallax: the pointer anywhere over the hero leans the arch toward it (target → eased value).
+  const lean = { x: 0, y: 0, tx: 0, ty: 0 };
 
   function stageAt(ms) {
     const cycle = PLAY_MS + HOLD_MS + BACK_MS + REST_MS;
@@ -140,12 +142,16 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
   function frame(now) {
     raf = 0;
     const dt = Math.min(64, now - prev); prev = now;
-    if (!hovering && !dragging) { clock += dt; spin += dt * 0.00018; }
+    if (!dragging) { clock += dt; spin += dt * 0.00018; }
+    const k = 1 - Math.pow(0.001, dt / 1000);   // frame-rate independent easing
+    lean.x += (lean.tx - lean.x) * k; lean.y += (lean.ty - lean.y) * k;
     const rect = stage.getBoundingClientRect();
     const scrolled = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height)));
-    yaw.rotation.y = Math.sin(spin) * 0.55 + dragYaw;
-    pitch.rotation.x = BASE_PITCH + dragPitch + scrolled * 0.45;
-    yaw.position.y = -scrolled * radius * 0.35;
+    yaw.rotation.y = Math.sin(spin) * 0.55 + dragYaw + lean.x * 0.35;
+    yaw.rotation.z = -lean.x * 0.06;
+    pitch.rotation.x = BASE_PITCH + dragPitch + lean.y * 0.22 + scrolled * 0.45;
+    yaw.position.x = lean.x * radius * 0.05;
+    yaw.position.y = -scrolled * radius * 0.25 - lean.y * radius * 0.04;
     pose(stageAt(clock));
     renderer.render(scene, camera);
     if (visible) raf = requestAnimationFrame(frame);
@@ -162,8 +168,13 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
   });
 
   if (!touch) {
-    canvas.addEventListener('pointerenter', () => { hovering = true; });
-    canvas.addEventListener('pointerleave', () => { hovering = false; });
+    const root = parallaxRoot || stage;
+    root.addEventListener('pointermove', (e) => {
+      const r = root.getBoundingClientRect();
+      lean.tx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
+      lean.ty = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
+    });
+    root.addEventListener('pointerleave', () => { lean.tx = 0; lean.ty = 0; });
     canvas.addEventListener('pointerdown', (e) => {
       dragging = { x: e.clientX, y: e.clientY, yaw: dragYaw, pitch: dragPitch };
       canvas.setPointerCapture(e.pointerId);
