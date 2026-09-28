@@ -1,6 +1,10 @@
 // Routes <site>.<ROOT_DOMAIN> to the files of apps/<site>, which the deploy workflow
 // copies to /<site>/ in the Worker's static assets. Unknown sites get a plain 404.
+// /_forms/<form> on any site goes to the form endpoint in forms.js.
+import { handleForm } from './forms.js';
+
 const ROOT_DOMAIN = 'external.kr';
+const FORMS_PREFIX = '/_forms/';
 const SITE_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 function siteFromHost(hostname) {
@@ -42,6 +46,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const site = siteFromHost(url.hostname);
+    if (site && url.pathname.startsWith(FORMS_PREFIX)) {
+      return handleForm(request, env, site, url.pathname.slice(FORMS_PREFIX.length));
+    }
     if (site) return serve(env, request, site, url.pathname);
     return new Response('Not Found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
   },

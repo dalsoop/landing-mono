@@ -15,6 +15,32 @@
 1. `apps/<사이트>/index.html` 을 만듭니다. 폴더 이름은 소문자·숫자·하이픈만 씁니다.
 2. `main` 에 푸시합니다. 몇 분 뒤 `https://<사이트>.external.kr` 이 열립니다.
 
+## 양식
+
+모든 사이트는 `POST /_forms/<폼>` 으로 양식 제출을 받을 수 있습니다. 받은 내용은 R2 버킷 `landing-forms` 에 `<사이트>/<폼>/<ISO시각>-<uuid>.json` 으로 저장합니다. 파일에는 필드 값, 받은 시각, Cloudflare 가 판단한 국가가 들어가고, IP 는 저장하지 않습니다.
+
+- 사이트가 받을 폼은 `apps/<사이트>/forms.json` 에 적습니다. 폼 이름을 키로 쓰고 `fields`(받을 필드), `required`, `email`(이메일 형식을 검사할 필드), `options`(허용 값), `max_length`(필드별 최대 길이, 기본 2000자), `redirect`(JavaScript 없이 제출했을 때 303 으로 보낼 경로)를 둡니다. 예시는 [apps/cualign/forms.json](apps/cualign/forms.json) 입니다.
+- 배포할 때 이 파일은 사이트 폴더에서 빠져서 `/_forms/<사이트>.json` 으로 옮겨지므로 브라우저에서는 읽을 수 없습니다. `forms.json` 에 없는 폼이나 사이트는 404 입니다.
+- 본문은 JSON 이나 form-urlencoded 이고 16KB 를 넘으면 413 입니다. `Origin` 이 그 사이트 자신이 아니면 403 이고, 허니팟 필드 `website` 가 채워져 있으면 저장하지 않고 성공으로 응답합니다.
+- `Accept: application/json` 요청은 `{"ok":true}` 나 `{"ok":false,"error":…,"fields":{…}}` 를 받고, JavaScript 없이 제출한 양식은 성공하면 `redirect` 로 303, 실패하면 오류 안내 HTML 을 받습니다.
+
+받은 요청은 다음 명령으로 봅니다. `CF_API_TOKEN` 에는 R2 읽기 권한이 있어야 합니다.
+
+```bash
+# 목록
+curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+  "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/r2/buckets/landing-forms/objects?prefix=cualign/demo-request/" \
+  | jq -r '.result[] | "\(.last_modified)  \(.key)"'
+
+# 한 건 내용 (키는 위 목록에서 복사)
+CLOUDFLARE_API_TOKEN=$CF_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CF_ACCOUNT_ID \
+  npx --yes wrangler@4 r2 object get "landing-forms/<키>" --remote --pipe | jq .
+
+# 삭제 요청 처리
+CLOUDFLARE_API_TOKEN=$CF_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CF_ACCOUNT_ID \
+  npx --yes wrangler@4 r2 object delete "landing-forms/<키>" --remote
+```
+
 ## 저장소 설정
 
 배포 워크플로에는 저장소 시크릿 두 개가 필요합니다.
