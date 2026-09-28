@@ -3,54 +3,20 @@ name: deploy
 on:
   push:
     branches: [main]
-    paths: ["apps/**"]
+    paths: ["apps/**", "router/**", ".github/workflows/deploy.yml"]
   workflow_dispatch:
-    inputs:
-      app:
-        description: "배포할 apps/ 아래 폴더 이름 (비우면 전부)"
-        required: false
-        default: ""
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy
   cancel-in-progress: false
 
-jobs:
-  plan:
-    runs-on: ubuntu-latest
-    outputs:
-      apps: ${{ steps.pick.outputs.apps }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: pick
-        env:
-          BEFORE: ${{ github.event.before }}
-          INPUT_APP: ${{ github.event.inputs.app }}
-        run: |
-          set -euo pipefail
-          all=$(find apps -mindepth 2 -maxdepth 2 -name site.json | cut -d/ -f2 | sort -u)
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "$INPUT_APP" ]; then picked="$INPUT_APP"; else picked="$all"; fi
-          elif [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            picked="$all"
-          else
-            changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA" -- apps | cut -d/ -f2 | sort -u)
-            picked=$(comm -12 <(echo "$all") <(echo "$changed"))
-          fi
-          json=$(printf '%s\n' $picked | jq -R . | jq -sc 'map(select(length > 0))')
-          echo "apps=$json" >> "$GITHUB_OUTPUT"
-          echo "deploy: $json"
+env:
+  PAGES_PROJECT: landing-mono
+  ROOT_DOMAIN: external.kr
 
+jobs:
   deploy:
-    needs: plan
-    if: needs.plan.outputs.apps != '[]'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app: ${{ fromJson(needs.plan.outputs.apps) }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -62,35 +28,54 @@ jobs:
             echo "::error::저장소 시크릿 CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID 가 필요합니다(README 의 저장소 설정 참고)."
             exit 1
           fi
-      - name: read site.json
-        id: site
+      - name: build
+        id: build
         run: |
           set -euo pipefail
-          f="apps/${{ matrix.app }}/site.json"
-          echo "project=$(jq -r .project "$f")" >> "$GITHUB_OUTPUT"
-          echo "domain=$(jq -r '.domain // empty' "$f")" >> "$GITHUB_OUTPUT"
+          rm -rf dist && mkdir dist
+          sites=""
+          for dir in apps/*/; do
+            site=$(basename "$dir")
+            if ! echo "$site" | grep -Eq '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'; then
+              echo "::error::apps/$site: 폴더 이름은 도메인에 쓸 수 있는 소문자·숫자·하이픈이어야 합니다."
+              exit 1
+            fi
+            if [ ! -f "$dir/index.html" ]; then
+              echo "::error::apps/$site: index.html 이 없습니다."
+              exit 1
+            fi
+            cp -R "$dir" "dist/$site"
+            sites="$sites $site"
+          done
+          cp router/_worker.js dist/_worker.js
+          echo "sites=$sites" >> "$GITHUB_OUTPUT"
+          echo "배포할 사이트:$sites"
       - name: ensure Pages project
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
-          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/${{ steps.site.outputs.project }}")
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$PAGES_PROJECT")
           if [ "$code" = "404" ]; then
-            npx --yes wrangler@3 pages project create "${{ steps.site.outputs.project }}" --production-branch main
+            npx --yes wrangler@3 pages project create "$PAGES_PROJECT" --production-branch main
           elif [ "$code" != "200" ]; then
-            echo "Pages 프로젝트 조회 실패: HTTP $code" >&2; exit 1
+            echo "::error::Pages 프로젝트 조회 실패: HTTP $code"; exit 1
           fi
       - name: deploy
-        run: npx --yes wrangler@3 pages deploy "apps/${{ matrix.app }}" --project-name "${{ steps.site.outputs.project }}" --branch main --commit-dirty=true
-      - name: attach domain
-        if: steps.site.outputs.domain != ''
+        run: npx --yes wrangler@3 pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true
+      - name: attach domains
+        env:
+          SITES: ${{ steps.build.outputs.sites }}
         run: |
           set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/${{ steps.site.outputs.project }}/domains"
-          have=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" | jq -r --arg d "${{ steps.site.outputs.domain }}" '[.result[]? | select(.name == $d)] | length')
-          if [ "$have" = "0" ]; then
-            curl -sf -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
-              --data "{\"name\":\"${{ steps.site.outputs.domain }}\"}" "$api" > /dev/null
-            echo "도메인 연결: ${{ steps.site.outputs.domain }}"
-          else
-            echo "도메인 이미 연결됨: ${{ steps.site.outputs.domain }}"
-          fi
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT/domains"
+          have=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" | jq -r '.result[]?.name')
+          for site in $SITES; do
+            domain="$site.$ROOT_DOMAIN"
+            if echo "$have" | grep -qx "$domain"; then
+              echo "연결됨: https://$domain"
+            else
+              curl -sf -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+                --data "{\"name\":\"$domain\"}" "$api" > /dev/null
+              echo "새로 연결: https://$domain"
+            fi
+          done
