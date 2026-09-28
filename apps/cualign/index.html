@@ -47,7 +47,7 @@
       </nav>
       <div class="nav-actions">
         <a class="btn btn-ghost btn-sm nav-gh" href="https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype" rel="noopener">GitHub</a>
-        <a class="btn btn-ghost btn-sm nav-demo" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo</a>
+        <a class="btn btn-ghost btn-sm nav-demo" href="/request/" data-demo-request>Request a demo</a>
         <span class="access-note nav-access" id="access-nav">Access required</span>
         <button class="btn btn-primary btn-sm" type="button" data-launch aria-describedby="access-nav">Launch prototype</button>
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-nav-toggle>
@@ -62,7 +62,7 @@
       <a href="#evaluate">Evaluation</a>
       <a href="#faq">FAQ</a>
       <a href="/docs/">Docs</a>
-      <a href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo</a>
+      <a href="/request/" data-demo-request>Request a demo</a>
       <a href="https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype" rel="noopener">GitHub</a>
     </div>
   </header>
@@ -84,7 +84,7 @@
 
           <div class="hero-actions reveal">
             <button class="btn btn-primary" type="button" data-launch aria-describedby="access-hero">Launch prototype <span aria-hidden="true">→</span></button>
-            <a class="btn btn-ghost" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo</a>
+            <a class="btn btn-ghost" href="/request/" data-demo-request>Request a demo</a>
           </div>
           <p class="access-note hero-access reveal" id="access-hero"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>Access required. Login details are shared on request.</p>
         </div>
@@ -108,7 +108,6 @@
     <section class="section" id="problem">
       <div class="container">
         <header class="split-head reveal">
-          <p class="kicker"><span>01</span> Problem</p>
           <h2>Every plan change<br><span class="dim">means rebuilding the CAD.</span></h2>
           <div class="split-copy">
             <p>After diagnosis, dentists still turn the plan into per-stage 3D models by hand. A treatment longer than a year needs dozens of them.</p>
@@ -144,7 +143,6 @@
     <section class="section section-agent" id="how">
       <div class="container">
         <header class="split-head reveal">
-          <p class="kicker"><span>02</span> How it works</p>
           <h2>Ask for a change.<br><span class="dim">Get a new, checked plan.</span></h2>
           <div class="split-copy">
             <p>Each step shows who acts. The agent proposes, and every call that matters stays with you.</p>
@@ -195,15 +193,15 @@
               </ol>
               <div class="demo-media" data-demo-media>
                 <figure class="is-active" data-media="0">
-                  <img src="assets/arch-000001-s00.webp" width="1000" height="830" loading="lazy" alt="A crowded upper arch before treatment.">
+                  <img src="assets/stages/000001-00.webp" width="1000" height="830" loading="lazy" alt="A crowded upper arch before treatment.">
                   <figcaption>Before treatment</figcaption>
                 </figure>
                 <figure data-media="1">
-                  <img src="assets/arch-000001-s18.webp" width="1000" height="830" loading="lazy" alt="The drafted final stage. Teeth that moved are shaded green.">
+                  <img src="assets/stages/000001-18.webp" width="1000" height="830" loading="lazy" alt="The drafted final stage. Teeth that moved are shaded green.">
                   <figcaption>The drafted plan, final stage</figcaption>
                 </figure>
                 <figure data-media="2">
-                  <img src="assets/arch-000001-s06.webp" width="1000" height="830" loading="lazy" alt="A middle stage with two front teeth shaded red where they collide.">
+                  <img src="assets/stages/000001-06.webp" width="1000" height="830" loading="lazy" alt="A middle stage with two front teeth shaded red where they collide.">
                   <figcaption>The collision, in red</figcaption>
                 </figure>
                 <figure data-media="3">
@@ -222,21 +220,43 @@
     <section class="section" id="review">
       <div class="container scrub">
         <div class="scrub-copy reveal">
-          <p class="kicker"><span>03</span> Review</p>
           <h2>See every stage<br><span class="dim">before you sign off.</span></h2>
           <p>Drag through a real 18-stage plan. Teeth turn green as they move, and red marks a collision the rule check found.</p>
           <div class="scrub-control">
-            <label for="stage-range" class="sr-only">Treatment stage</label>
-            <input id="stage-range" type="range" min="0" max="3" step="1" value="0" data-stage-range>
-            <div class="scrub-ends" aria-hidden="true"><span>Before</span><span>After</span></div>
+            <div class="scrub-row">
+              <button class="scrub-play" type="button" aria-label="Pause stage playback" data-stage-play>
+                <svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3.5v9M10.5 3.5v9"/></svg>
+                <svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L12.5 8z"/></svg>
+              </button>
+              <div class="scrub-track">
+                <label for="stage-range" class="sr-only">Treatment stage</label>
+                <input id="stage-range" type="range" min="0" max="18" step="1" value="0" data-stage-range>
+                <div class="scrub-ends" aria-hidden="true"><span>Before</span><span>After</span></div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="scrub-media reveal" data-stage-media>
           <div class="scrub-glow" aria-hidden="true"></div>
-          <img src="assets/arch-000001-s00.webp" width="1000" height="830" alt="Upper arch before treatment." class="is-active" data-stage="0">
-          <img src="assets/arch-000001-s06.webp" width="1000" height="830" alt="An early stage. Two front teeth are shaded red where they collide." loading="lazy" data-stage="1">
-          <img src="assets/arch-000001-s12.webp" width="1000" height="830" alt="A later stage. The collision is still flagged in red." loading="lazy" data-stage="2">
-          <img src="assets/arch-000001-s18.webp" width="1000" height="830" alt="The final stage of the plan." loading="lazy" data-stage="3">
+          <img src="assets/stages/000001-00.webp" width="1000" height="830" alt="Upper arch before treatment." class="is-active" data-stage="0">
+          <img src="assets/stages/000001-01.webp" width="1000" height="830" alt="Stage 1 of 18." loading="lazy" data-stage="1">
+          <img src="assets/stages/000001-02.webp" width="1000" height="830" alt="Stage 2 of 18." loading="lazy" data-stage="2">
+          <img src="assets/stages/000001-03.webp" width="1000" height="830" alt="Stage 3 of 18." loading="lazy" data-stage="3">
+          <img src="assets/stages/000001-04.webp" width="1000" height="830" alt="Stage 4 of 18." loading="lazy" data-stage="4">
+          <img src="assets/stages/000001-05.webp" width="1000" height="830" alt="Stage 5 of 18." loading="lazy" data-stage="5">
+          <img src="assets/stages/000001-06.webp" width="1000" height="830" alt="Stage 6 of 18. Two front teeth are shaded red where they collide." loading="lazy" data-stage="6">
+          <img src="assets/stages/000001-07.webp" width="1000" height="830" alt="Stage 7 of 18. Two front teeth are shaded red where they collide." loading="lazy" data-stage="7">
+          <img src="assets/stages/000001-08.webp" width="1000" height="830" alt="Stage 8 of 18. Two front teeth are shaded red where they collide." loading="lazy" data-stage="8">
+          <img src="assets/stages/000001-09.webp" width="1000" height="830" alt="Stage 9 of 18. Two front teeth are shaded red where they collide." loading="lazy" data-stage="9">
+          <img src="assets/stages/000001-10.webp" width="1000" height="830" alt="Stage 10 of 18. Two front teeth are shaded red where they collide." loading="lazy" data-stage="10">
+          <img src="assets/stages/000001-11.webp" width="1000" height="830" alt="Stage 11 of 18. Two front teeth are shaded red where they collide." loading="lazy" data-stage="11">
+          <img src="assets/stages/000001-12.webp" width="1000" height="830" alt="Stage 12 of 18. Two front teeth are shaded red where they collide." loading="lazy" data-stage="12">
+          <img src="assets/stages/000001-13.webp" width="1000" height="830" alt="Stage 13 of 18." loading="lazy" data-stage="13">
+          <img src="assets/stages/000001-14.webp" width="1000" height="830" alt="Stage 14 of 18." loading="lazy" data-stage="14">
+          <img src="assets/stages/000001-15.webp" width="1000" height="830" alt="Stage 15 of 18." loading="lazy" data-stage="15">
+          <img src="assets/stages/000001-16.webp" width="1000" height="830" alt="Stage 16 of 18." loading="lazy" data-stage="16">
+          <img src="assets/stages/000001-17.webp" width="1000" height="830" alt="Stage 17 of 18." loading="lazy" data-stage="17">
+          <img src="assets/stages/000001-18.webp" width="1000" height="830" alt="The final stage of the plan." loading="lazy" data-stage="18">
         </div>
       </div>
     </section>
@@ -245,7 +265,6 @@
     <section class="section" id="control">
       <div class="container">
         <header class="split-head reveal">
-          <p class="kicker"><span>04</span> Control</p>
           <h2>Nothing leaves<br><span class="dim">without your approval.</span></h2>
           <div class="split-copy">
             <p>Diagnosis, prescription and the final choice stay with the dentist.</p>
@@ -280,7 +299,6 @@
     <section class="section" id="evaluate">
       <div class="container">
         <header class="split-head reveal">
-          <p class="kicker"><span>05</span> How we evaluate</p>
           <h2>No certification yet.<br><span class="dim">The tests are public. Re-run them.</span></h2>
           <div class="split-copy">
             <p>Everything below is in the public repository and can be re-run.</p>
@@ -317,7 +335,6 @@
     <section class="section" id="compatibility">
       <div class="container">
         <header class="split-head reveal">
-          <p class="kicker"><span>06</span> Compatibility</p>
           <h2>Works from per-tooth STL,<br><span class="dim">hands back STL for every stage.</span></h2>
         </header>
         <div class="io reveal">
@@ -341,7 +358,6 @@
     <section class="section" id="nvidia">
       <div class="container">
         <header class="split-head reveal">
-          <p class="kicker"><span>07</span> Built on NVIDIA</p>
           <h2>The NVIDIA stack underneath,<br><span class="dim">and what each piece handles.</span></h2>
         </header>
         <div class="grid-lines grid-4">
@@ -369,7 +385,7 @@
     <!-- Team -->
     <section class="section section-tight" id="team">
       <div class="container team reveal">
-        <p class="kicker"><span>08</span> Who builds it</p>
+        <h2 class="team-title">Who builds cuAlign.</h2>
         <div class="team-grid">
           <div>
             <h3>Hackathon team</h3>
@@ -387,7 +403,6 @@
     <section class="section" id="scope">
       <div class="container limits">
         <header class="reveal">
-          <p class="kicker"><span>09</span> Current scope</p>
           <h2>What it handles today,<br><span class="dim">and what it doesn't yet.</span></h2>
         </header>
         <ul class="limit-list reveal">
@@ -404,7 +419,6 @@
     <section class="section" id="faq">
       <div class="container faq">
         <header class="reveal">
-          <p class="kicker"><span>10</span> FAQ</p>
           <h2>Questions.</h2>
         </header>
         <div class="faq-list reveal">
@@ -443,7 +457,7 @@
         <h2>Try a plan change<br><span class="dim">on a sample case.</span></h2>
         <p>We share access to the hosted prototype on request. The docs cover running it yourself.</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo <span aria-hidden="true">→</span></a>
+          <a class="btn btn-primary" href="/request/" data-demo-request>Request a demo <span aria-hidden="true">→</span></a>
           <a class="btn btn-ghost" href="/docs/#/quickstart">Read the docs</a>
         </div>
       </div>

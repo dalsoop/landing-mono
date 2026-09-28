@@ -4,14 +4,15 @@
   const EULA_VERSION = '2026-09-28';
   const CONSENT_KEY = 'cualign.eula';
   const LAUNCH_URL = 'https://cualign-proto.external.kr/';   // hosted prototype, behind Basic auth
-  const DEMO_FORM_URL = '';   // demo request form; the buttons stay hidden while this is empty
+  const DEMO_FORM_URL = '';   // demo request form; the buttons are hidden while this is empty
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   // Demo request buttons: shown only once the form URL is set.
-  if (DEMO_FORM_URL) {
-    document.querySelectorAll('[data-demo-request]').forEach((a) => { a.href = DEMO_FORM_URL; a.hidden = false; });
-  }
+  document.querySelectorAll('[data-demo-request]').forEach((a) => {
+    if (DEMO_FORM_URL) a.href = DEMO_FORM_URL;
+    else a.hidden = true;
+  });
 
   // Nav: border once scrolled, mobile menu toggle.
   const nav = document.querySelector('[data-nav]');
@@ -171,17 +172,47 @@
   }
 
 
-  // Stage scrubber: four real stages from the sample case.
-  const STAGES = ['Before treatment', 'Stage 6 of 18, collision flagged', 'Stage 12 of 18, collision flagged', 'Final stage'];
+  // Stage scrubber: every stage of a real sample plan. Plays on its own while the section is on screen;
+  // moving the slider or pressing the button stops it. Reduced motion: no autoplay.
   const range = document.querySelector('[data-stage-range]');
   const imgs = [...document.querySelectorAll('[data-stage-media] img')];
+  const playBtn = document.querySelector('[data-stage-play]');
   if (range) {
+    const last = Number(range.max);
+    const label = (i) => (i === 0 ? 'Before treatment' : i === last ? 'Final stage'
+      : `Stage ${i} of ${last}${i >= 6 && i <= 12 ? ', collision flagged' : ''}`);
     const show = (i) => {
-      range.setAttribute('aria-valuetext', STAGES[i]);
+      range.value = String(i);
+      range.setAttribute('aria-valuetext', label(i));
       imgs.forEach((img) => img.classList.toggle('is-active', Number(img.dataset.stage) === i));
     };
-    range.addEventListener('input', () => show(Number(range.value)));
-    show(Number(range.value));
+    const STEP_MS = 900, END_PAUSE_MS = 1500;
+    let wanted = !reduceMotion, onScreen = false, timer = 0;
+    const running = () => wanted && onScreen && !document.hidden;
+    const tick = () => {
+      timer = 0;
+      if (!running()) return;
+      const i = Number(range.value);
+      show(i >= last ? 0 : i + 1);
+      timer = setTimeout(tick, Number(range.value) >= last ? END_PAUSE_MS : STEP_MS);
+    };
+    const sync = () => {
+      if (playBtn) {
+        playBtn.classList.toggle('is-paused', !wanted);
+        playBtn.setAttribute('aria-label', wanted ? 'Pause stage playback' : 'Play stage playback');
+      }
+      if (running() && !timer) timer = setTimeout(tick, STEP_MS);
+      if (!running() && timer) { clearTimeout(timer); timer = 0; }
+    };
+    range.addEventListener('input', () => { wanted = false; show(Number(range.value)); sync(); });
+    if (playBtn) playBtn.addEventListener('click', () => { wanted = !wanted; sync(); });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; sync(); }, { threshold: 0.3 })
+        .observe(range.closest('section') || range);
+    }
+    document.addEventListener('visibilitychange', sync);
+    show(0);
+    sync();
   }
 
   // Consent gate before launching.
