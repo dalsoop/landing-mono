@@ -47,7 +47,9 @@
       </nav>
       <div class="nav-actions">
         <a class="btn btn-ghost btn-sm nav-gh" href="https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype" rel="noopener">GitHub</a>
-        <button class="btn btn-primary btn-sm" type="button" data-launch>Launch prototype</button>
+        <a class="btn btn-ghost btn-sm nav-demo" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo</a>
+        <span class="access-note nav-access" id="access-nav">Access required</span>
+        <button class="btn btn-primary btn-sm" type="button" data-launch aria-describedby="access-nav">Launch prototype</button>
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-nav-toggle>
           <span class="sr-only">Menu</span><span aria-hidden="true"></span>
         </button>
@@ -60,6 +62,7 @@
       <a href="#evaluate">Evaluation</a>
       <a href="#faq">FAQ</a>
       <a href="/docs/">Docs</a>
+      <a href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo</a>
       <a href="https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype" rel="noopener">GitHub</a>
     </div>
   </header>
@@ -81,9 +84,10 @@
           </a>
 
           <div class="hero-actions reveal">
-            <button class="btn btn-primary" type="button" data-launch>Launch prototype <span aria-hidden="true">→</span></button>
-            <a class="btn btn-ghost" href="#how">See how it works</a>
+            <button class="btn btn-primary" type="button" data-launch aria-describedby="access-hero">Launch prototype <span aria-hidden="true">→</span></button>
+            <a class="btn btn-ghost" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo</a>
           </div>
+          <p class="access-note hero-access reveal" id="access-hero"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>Access required. Login details are shared on request.</p>
         </div>
 
         <div class="hero-visual">
@@ -321,7 +325,7 @@
             <p>A dentist judged space and approach for 12 sample scans by eye. We treat it as a qualitative reference and report no score.</p>
           </article>
         </div>
-        <p class="footnote reveal">The automated tests (<code>uv run pytest</code>) and a rule-based plan (<code>cualign plan</code>) run offline. The verification record in the <a href="https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype" rel="noopener">repository</a> lists what passed and what hasn't been checked. Clinical validity is not evaluated.</p>
+        <p class="footnote reveal">The automated tests (<code>uv run pytest</code>) and a rule-based plan (<code>cualign plan</code>) run offline. The verification record in the source repository lists what passed and what hasn't been checked. Clinical validity is not evaluated.</p>
         <!-- TODO(verified metric): a quantitative agreement figure goes here only once it is verified in the cuAlign repo (evals/real_scans). Do not publish an unverified figure. -->
       </div>
     </section>
@@ -407,7 +411,7 @@
           <li><strong>Upper arch only.</strong> Translation, incisor rotation and vertical correction.</li>
           <li><strong>Not yet modelled.</strong> Rotation of canines and back teeth, torque, the lower arch, occlusion.</li>
           <li><strong>Computed checks.</strong> IPR adjusts space only in the calculation, and the collision check doesn't guarantee zero contact for every tooth pair.</li>
-          <li><strong>Runs locally.</strong> No hosted demo, no user accounts.</li>
+          <li><strong>Hosted or local.</strong> A hosted prototype is available on request. You can also run it on your own machine.</li>
           <li><strong>For review.</strong> Exports are not validated for manufacturing or wear.</li>
         </ul>
       </div>
@@ -431,7 +435,7 @@
           </details>
           <details>
             <summary>What happens to scan data?</summary>
-            <p>You run cuAlign on your own machine, and scans and plans stay there. The agent conversation goes through the NVIDIA API. There is no login or per-user isolation, so don't upload identifiable patient data.</p>
+            <p>On the hosted prototype, scans and plans are stored on that server, behind access credentials. Run it locally and they stay on your machine. The agent conversation goes through the NVIDIA API either way, and there is no per-user isolation, so don't upload identifiable patient data.</p>
           </details>
           <details>
             <summary>How much does it cost?</summary>
@@ -443,7 +447,7 @@
           </details>
           <details>
             <summary>What do I need to run it?</summary>
-            <p>Python 3.12 and uv. Plans compute without a key. The conversation needs an NVIDIA API key.</p>
+            <p>Nothing, if you use the hosted prototype. We share its access details on request. To run it yourself you need Python 3.12 and uv. Plans compute without a key, and the conversation needs an NVIDIA API key. The <a href="/docs/#/quickstart">Quickstart</a> walks through it.</p>
           </details>
         </div>
       </div>
@@ -454,10 +458,10 @@
       <div class="cta-glow" aria-hidden="true"></div>
       <div class="container cta reveal">
         <h2>Open a sample case.<br><span class="dim">Describe a prescription.</span></h2>
-        <p>The demo runs on your own machine. Read the code and send feedback on GitHub.</p>
+        <p>We share access to the hosted prototype on request. The docs cover running it yourself.</p>
         <div class="hero-actions">
-          <button class="btn btn-primary" type="button" data-launch>Run the demo <span aria-hidden="true">→</span></button>
-          <a class="btn btn-ghost" href="https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype" rel="noopener">Code &amp; feedback</a>
+          <a class="btn btn-primary" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo <span aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost" href="/docs/#/quickstart">Read the docs</a>
         </div>
       </div>
     </section>
@@ -489,7 +493,7 @@
       </ul>
       <label class="check"><input type="checkbox" required data-consent-check> I will use cuAlign for research and demonstration only.</label>
       <label class="check"><input type="checkbox" required data-consent-check> I will not upload identifiable patient data.</label>
-      <p class="consent-dest">Next: the setup guide on GitHub. There is no public hosted demo yet.</p>
+      <p class="consent-dest">Next: the hosted prototype at cualign-proto.external.kr. It asks for access details, which we share on request.</p>
       <div class="consent-actions">
         <button class="btn btn-ghost" type="button" value="cancel" data-consent-cancel>Cancel</button>
         <button class="btn btn-primary" type="submit" value="agree" disabled data-consent-agree>Agree &amp; continue</button>

@@ -19,6 +19,8 @@ cuAlign drafts clear-aligner staging plans for the upper arch. A dentist states 
 
 It's a research prototype. It isn't a medical device and hasn't been clinically validated. Source: <https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype>.
 
+A hosted prototype runs at <https://cualign-proto.external.kr>, with access on request. You can also run it locally with the [Quickstart](quickstart.md).
+
 ## What comes out
 
 An approved plan downloads as `cualign_<plan_id>_stages.zip`:

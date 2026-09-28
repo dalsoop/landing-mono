@@ -3,9 +3,15 @@
 
   const EULA_VERSION = '2026-09-28';
   const CONSENT_KEY = 'cualign.eula';
-  const LAUNCH_URL = 'https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype';
+  const LAUNCH_URL = 'https://cualign-proto.external.kr/';   // hosted prototype, behind Basic auth
+  const DEMO_FORM_URL = '';   // demo request form; the buttons stay hidden while this is empty
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  // Demo request buttons: shown only once the form URL is set.
+  if (DEMO_FORM_URL) {
+    document.querySelectorAll('[data-demo-request]').forEach((a) => { a.href = DEMO_FORM_URL; a.hidden = false; });
+  }
 
   // Nav: border once scrolled, mobile menu toggle.
   const nav = document.querySelector('[data-nav]');

@@ -66,13 +66,21 @@ code { font: 500 0.88em var(--mono); color: var(--text); }
 .btn-ghost { background: rgba(255, 255, 255, .03); border-color: var(--line-strong); color: var(--text); }
 .btn-ghost:hover { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .24); }
 
+/* Access note next to the launch buttons */
+.access-note { display: inline-flex; align-items: center; gap: 6px; font: 500 11.5px var(--mono); color: var(--muted); white-space: nowrap; }
+.access-note svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
+.hero-access { margin-top: 12px; white-space: normal; }
+[data-demo-request][hidden] { display: none !important; }
+
 /* Nav */
 .nav { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid transparent; transition: background .3s, border-color .3s; }
 .nav.is-scrolled { background: rgba(5, 6, 5, .72); border-color: var(--line); backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px); }
 .nav-inner { display: flex; align-items: center; gap: 28px; height: 64px; }
 .brand img { width: 112px; height: auto; }
 .nav-links { display: flex; gap: 26px; margin-right: auto; }
-.nav-links a { font-size: 14px; color: var(--text-2); transition: color .2s; }
+.nav-links a { font-size: 14px; color: var(--text-2); white-space: nowrap; transition: color .2s; }
+.brand { flex: none; }
+@media (max-width: 1200px) { .nav-access, .nav-gh { display: none; } }
 .nav-links a:hover { color: var(--text); }
 .nav-actions { display: flex; align-items: center; gap: 10px; }
 .nav-toggle { display: none; width: 36px; height: 36px; border: 1px solid var(--line-strong); border-radius: 8px; background: transparent; cursor: pointer; position: relative; }
@@ -372,7 +380,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 24px; cu
   .demo-body { grid-template-columns: minmax(0, 360px) minmax(0, 1fr); }
 }
 @media (max-width: 900px) {
-  .nav-links, .nav-gh { display: none; }
+  .nav-links, .nav-gh, .nav-demo, .nav-access { display: none; }
   .nav-toggle { display: inline-block; }
   .nav-inner { justify-content: space-between; }
   .hero-inner { grid-template-columns: minmax(0, 1fr); }
