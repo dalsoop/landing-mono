@@ -1,0 +1,14 @@
+{
+  "demo-request": {
+    "fields": ["name", "email", "organization", "role", "country", "message", "ack_research", "ack_contact"],
+    "required": ["name", "email", "organization", "role", "ack_research", "ack_contact"],
+    "email": ["email"],
+    "options": {
+      "role": ["Orthodontist", "General dentist", "Dental technician", "Researcher", "Other"],
+      "ack_research": ["yes"],
+      "ack_contact": ["yes"]
+    },
+    "max_length": { "name": 200, "email": 254, "organization": 300, "country": 100 },
+    "redirect": "/request/thanks"
+  }
+}
