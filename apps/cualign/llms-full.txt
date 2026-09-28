@@ -1,0 +1,1076 @@
+# cuAlign
+
+> Research prototype that drafts clear-aligner staging plans for the upper arch from a dentist's prescription, checks every stage with geometry rules, and exports per-stage STL files only after the dentist approves.
+
+Runs locally as a FastAPI/NVIDIA NeMo Agent Toolkit server (`uv run cualign serve`, port 8000). The rule engine, scan upload, approval and export work without an NVIDIA API key. The chat agent and MCP planning need one. Tooth numbers: FDI in prescriptions and upload names, Universal (upper 1-16) in API responses.
+
+<!-- source: https://cualign.external.kr/docs/overview.md -->
+
+---
+title: Overview
+description: What cuAlign does, what it outputs, who approves, and which page to open for each task.
+order: 1
+updated: 2026-09-28
+---
+
+# Overview
+
+cuAlign drafts clear-aligner staging plans for the upper arch. A dentist states the prescription in Korean ("비발치, IPR 11-21·11-12·21-22 각 0.4mm"). An agent on NVIDIA NeMo Agent Toolkit turns it into constraints, computes a target arrangement and the stages to reach it, and checks every stage with geometry rules. When a strategy fails the rules it tries the next allowed one. The dentist approves in the web UI, and only then can the per-stage STL files be downloaded.
+
+It's a research prototype. It isn't a medical device and hasn't been clinically validated. Source: <https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype>.
+
+## What comes out
+
+An approved plan downloads as `cualign_<plan_id>_stages.zip`:
+
+```
+stage_01/2.stl … stage_NN/15.stl        one STL per tooth per stage (Universal numbers)
+print_models/<case_id>_U_stage01.stl    one printable upper-arch model per stage, only when the case has gingiva.stl
+print_models/README.txt
+```
+
+These files are for reviewing a plan. They aren't aligner shells.
+
+## Who does what
+
+| Step | Done by |
+|---|---|
+| Prescription: extraction teeth, IPR contacts, locked teeth, time limit | Dentist |
+| Reading the request, choosing strategies, computing stages, rule checks | Planning agent (Nemotron 3 Super on NIM) and cuAlign's geometry code |
+| Review memo on the selected plan | Read-only reviewer model, 2 attempts, 40 s total |
+| Approval, and with it STL export | Dentist, in the UI or `POST /api/plans/{id}/approval` |
+
+The agent never picks extraction teeth and never approves. The MCP tool `cualign_approve_plan` exists only to refuse.
+
+## Pick a page
+
+| I want to | Page |
+|---|---|
+| Install, run, and get a first plan | [Quickstart](quickstart.md) |
+| Upload my own per-tooth STL files | [Scans](scans.md) |
+| Change a prescription, fix a failing plan, approve, download | [Planning](planning.md) |
+| Look up a violation type or a limit | [Rules](rules.md) |
+| Drive cuAlign from another agent | [Agents](agents.md) |
+| Look up an endpoint | [HTTP API](api.md) |
+| Look up a CLI command | [CLI](cli.md) |
+| Set an environment variable | [Configuration](configuration.md) |
+| Decode an error message | [Troubleshooting](troubleshooting.md) |
+| Know what it can't do | [Limits](limits.md) |
+
+<!-- source: https://cualign.external.kr/docs/quickstart.md -->
+
+---
+title: Quickstart
+description: Install cuAlign, plan a sample case from the CLI or HTTP API, and run it with or without an NVIDIA API key.
+order: 2
+updated: 2026-09-28
+---
+
+# Quickstart
+
+You need Python 3.12, [uv](https://docs.astral.sh/uv/) and git. Every command below runs in `apps/cualign-prototype/`. The outputs are copied from a run on macOS arm64 without an NVIDIA API key.
+
+## Install
+
+```sh
+git clone https://github.com/dalsoop/nvidia-hackaton-2026-one.git
+cd nvidia-hackaton-2026-one/apps/cualign-prototype
+uv sync --frozen --extra dev
+```
+
+The CLI reads configs and bench files from the checkout, so a standalone wheel install won't run the server.
+
+## Recipe: first plan from the CLI (no key)
+
+`cualign plan` reads a short Korean prescription with fixed rules and plans a case. No model is called.
+
+```sh
+uv run cualign plan "발치 없이 12개월 안에, 앞니 먼저" --case moderate
+```
+
+```
+[요청] 발치 없이 12개월 안에, 앞니 먼저
+[제약] {"extraction": [], "months": 12, "stage_cap": 52, "order": "anterior_first", "ipr_surfaces": null}
+[시도] expansion       28장  6.4개월  실패 {'space_deficit': 1}
+[시도] ipr             13장  3.0개월  실패 {'space_deficit': 1, 'collision': 36}
+[시도] expansion_ipr   27장  6.2개월  통과
+[결과] expansion_ipr · 27장 · 6.2개월 · plan p3a8a85fa
+[완료] 5.3s · 이 계획은 초안입니다. 최종 판단은 의사가 합니다.
+```
+
+"12개월" became a cap of 52 stages (`round(12 × 30.4 / 7)`). Expansion alone left a space deficit, IPR alone added 36 collisions, and expansion plus IPR passed. See [CLI](cli.md) for the sentences it understands.
+
+## Recipe: start the server
+
+```sh
+cp .env.example .env          # put your key in NVIDIA_API_KEY, or leave it empty
+uv run cualign serve --host 127.0.0.1
+```
+
+Open <http://localhost:8000/ui/>. The UI is in Korean and loads three.js from a CDN. `GET /health` answers `{"status":"healthy"}` once it's up.
+
+Without a key the server still starts. The log says:
+
+```
+ERROR - cualign.server.rails_middleware:428 - cuAlign: Guardrails OFF (NVIDIA_API_KEY is not set) — every turn runs without rails
+```
+
+## Recipe: first plan over HTTP (no key)
+
+Open a sample case, then ask the rule engine for a plan. `poseidon-000131` is a real upper scan whose prescription is non-extraction with 0.4 mm IPR at 11-21, 11-12 and 21-22.
+
+```sh
+curl -s -X POST localhost:8000/api/cases/poseidon-000131/activate
+```
+
+```json
+{"case_id": "poseidon-000131", "n_teeth": 14, "crowding_mm": 1.6,
+ "constraints": {"extraction": [], "lock": [], "ipr_exclude": [], "ipr_limit_mm": 0.25,
+                 "ipr_surfaces": [[7, 8, 0.4], [8, 9, 0.4], [9, 10, 0.4]],
+                 "stage_cap": null, "order": "simultaneous", "allow_extraction": false},
+ "active_plan": null, "flow": null, "unsupported": []}
+```
+
+```sh
+curl -s -X POST localhost:8000/api/plan -H 'content-type: application/json' \
+  -d '{"case_id": "poseidon-000131"}'
+```
+
+```json
+{"case_id": "poseidon-000131",
+ "chosen": {"plan_id": "pe2399cd3", "parent_plan_id": null, "strategy": "ipr",
+            "n_stages": 9, "months": 2.1, "passed": true, "violations": 0, "by_type": {},
+            "review": {"status": "skipped", "attempts": 0, "message": "규칙 폴백 — 검토 에이전트 미실행", "error": null},
+            "approval": null, "input_stale": false, "previous_calculation": false, "...": "..."},
+ "tried": [{"plan_id": "pe2399cd3", "strategy": "ipr", "n_stages": 9, "passed": true, "...": "..."},
+           {"plan_id": "...", "strategy": "expansion_ipr", "...": "..."}]}
+```
+
+`review.status` is `skipped` because no reviewer ran. A skipped review can still be approved. To approve and download, follow [Planning: approve and download](planning.md#recipe-approve-and-download-the-stl-zip).
+
+## Recipe: run without an NVIDIA API key
+
+What works and what doesn't, from a keyless run:
+
+| Feature | Without a key |
+|---|---|
+| `cualign plan`, `POST /api/plan`, the UI button «에이전트 없이 계산» | Works |
+| Recorded answers for the three samples, `POST /api/cases/{id}/replay` | Works |
+| Scan upload, input check, approval, STL export | Works |
+| Chat, `POST /chat/stream`, MCP `cualign_plan` | Fails with `plan_error` kind `nim_auth` |
+| Follow-up question card, `POST /api/followup` | Returns `{"question": null}` |
+| Guardrails | Off, logged at ERROR |
+
+Replaying a recorded agent turn gives you the agent's words and a recomputed plan with no model call:
+
+```sh
+curl -s -X POST localhost:8000/api/cases/poseidon-000001/replay \
+  -H 'content-type: application/json' -d '{"step": "stages"}'
+```
+
+```json
+{"recorded": true, "step": "stages", "recorded_at": "2026-09-27T23:55:02+00:00",
+ "answer_md": "**확장 + IPR 전략으로 46단계(약 10.6개월) 계획을 만들었습니다.** 규칙 위반은 없습니다. ...",
+ "plan_selected": {"plan_id": "pf6bf5447", "parent_plan_id": null,
+                   "review": {"status": "passed", "attempts": 1, "message": "검토 메모 ...", "rails": "passed"}},
+ "plans": [{"plan_id": "pa81930ad", "strategy": "ipr", "n_stages": 41, "passed": false, "...": "..."},
+           {"plan_id": "pf6bf5447", "strategy": "expansion_ipr", "n_stages": 46, "passed": true, "...": "..."}]}
+```
+
+## Recipe: run with a key
+
+Put a key from build.nvidia.com in `.env` as `NVIDIA_API_KEY=nvapi-...` and restart `cualign serve`. The chat panel and `POST /chat/stream` then run the planning agent. Not run for these docs, which were written against a keyless server.
+
+## Docker
+
+```sh
+git archive HEAD:apps/cualign-prototype | docker build -t cualign:local -
+docker run --rm -p 127.0.0.1:8000:8000 --env-file .env cualign:local
+```
+
+Not run for these docs. The build only includes committed files. Plans and STL files live inside the container and vanish with `--rm`.
+
+<!-- source: https://cualign.external.kr/docs/scans.md -->
+
+---
+title: Scans
+description: Register a patient, upload per-tooth upper-arch STL files (FDI or Universal names), read the input check, confirm it, and fix swapped left/right numbering.
+order: 3
+updated: 2026-09-28
+---
+
+# Scans
+
+cuAlign plans from one STL file per upper tooth. It doesn't segment a whole-arch scan. Patients and scans are stored on the machine running the server, under `$CUALIGN_OUT/patients/`.
+
+## Recipe: upload my per-tooth STL files
+
+**1. Name the files.** One file per tooth, named by its number, plus an optional `gingiva.stl`:
+
+```
+11.stl 12.stl 13.stl 14.stl 15.stl 16.stl 17.stl
+21.stl 22.stl 23.stl 24.stl 25.stl 26.stl 27.stl
+gingiva.stl
+```
+
+If any file is named 17, 18 or 21–28, the whole batch is read as FDI (upper right 18–11, upper left 21–28). Otherwise names are read as Universal 1–16. A batch with only 11–16 is ambiguous and is read as Universal. Names like `000018.stl` are ignored.
+
+**2. Register a patient.** The alias is a pseudonym, at most 40 characters. The memo is at most 200. Neither goes to the model, which sees only the case id.
+
+```sh
+curl -s -X POST localhost:8000/api/patients -H 'content-type: application/json' \
+  -d '{"alias": "Demo A", "memo": ""}'
+```
+
+```json
+{"patient_id": "P0001", "alias": "Demo A", "memo": "", "created_at": "2026-09-28T05:46:30+00:00", "scans": [], "last_scan": 0}
+```
+
+It fails with 400 `별칭을 입력하세요.` for an empty alias, 400 `별칭에 주민번호·전화번호·이메일 같은 식별정보를 넣지 마세요. 가명만 사용합니다.` for an alias that looks like a phone number, resident number or e-mail, and 422 `string_too_long` past 40 characters.
+
+**3. Upload.** Send every file as a `files` form field in one request.
+
+```sh
+cd myscan
+args=(); for f in *.stl; do args+=(-F "files=@$f"); done     # zsh or bash
+curl -s -X POST localhost:8000/api/patients/P0001/scans "${args[@]}"
+```
+
+```json
+{"scan_id": "S1", "case_id": "P0001-S1", "arch": "upper", "revision": 1,
+ "teeth": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "gingiva": true, "uploaded_at": "...", "confirmed_revision": null, "confirmed_at": null,
+ "orientation": {"basis": "gingiva", "side": "ok", "rotation_deg": 0.4, "transform": [["..."]]},
+ "check": {"case_id": "P0001-S1", "teeth": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "n_teeth": 14,
+           "missing": [], "outside": [], "widths_mm": {"...": "..."}, "crowding_mm": 1.7,
+           "rotation_deg": {"7": 15.6}, "vertical_mm": {"7": -1.4}, "scanned_gingiva": true,
+           "unsupported": [], "ready": true, "revision": 1, "confirmed": false, "confirmed_at": null}}
+```
+
+Tooth numbers in the response are Universal: FDI 11 became 8, FDI 27 became 15. The files were the FDI-renamed teeth of sample `poseidon-000131`.
+
+**4. Read the check.** `ready: true` means the planner can take it. `rotation_deg` and `vertical_mm` list the corrections the planner will make (here FDI 12 turned 15.6° and sitting 1.4 mm off its neighbours). `unsupported` lists why a scan can't be planned. `orientation.side` is `ok` or `reversed`.
+
+**5. Confirm.** Planning, approval and export all refuse an unconfirmed patient scan. Send the revision you checked:
+
+```sh
+curl -s -X POST localhost:8000/api/patients/P0001/scans/S1/confirm \
+  -H 'content-type: application/json' -d '{"revision": 1}'
+```
+
+```json
+{"scan_id": "S1", "revision": 1, "confirmed_revision": 1, "confirmed_at": "2026-09-28T05:46:54+00:00", "...": "..."}
+```
+
+The case id `P0001-S1` now works everywhere a sample id does. Continue with [Planning](planning.md).
+
+## Recipe: fix swapped left and right
+
+If the check shows the teeth numbered on the wrong side, mirror the numbers:
+
+```sh
+curl -s -X POST localhost:8000/api/patients/P0001/scans/S1/mirror
+```
+
+The response is a fresh check with `revision` raised by one and `confirmed: false`. Mirroring also removes approval from every plan of that scan, and those plans turn `input_stale: true` for good. Mirroring twice brings the numbers back but not the old plans. In our run a plan from revision 1 stayed stale at revision 3. Confirm the new revision and plan again.
+
+## Recipe: delete a scan or patient
+
+```sh
+curl -s -X DELETE localhost:8000/api/patients/P0001/scans/S2     # returns the patient
+curl -s -X DELETE localhost:8000/api/patients/P0001              # returns {"deleted", "scans", "plans"} (not run)
+```
+
+Both remove the scan's plans and files. Patient and scan ids are never reused.
+
+## What gets rejected
+
+Upload errors, copied from the server:
+
+| HTTP | `detail` | Cause |
+|---|---|---|
+| 400 | `11.stl: 같은 번호의 파일이 두 개 있습니다.` | Two files map to the same tooth |
+| 400 | `31.stl: 하악 번호(31~48)입니다. 지금은 상악 스캔만 받습니다.` | A lower-arch number. Upper arch only |
+| 400 | `upper_arch.stl: 한 덩어리 악궁 스캔으로 보입니다. 지금은 치아별로 나뉜 파일(11.stl … 27.stl, 선택 gingiva.stl)만 받습니다. 자동 치아 분리는 실험 단계입니다.` | An STL, PLY or OBJ without a tooth number, and no tooth files |
+| 400 | `치아별 STL(<치아번호>.stl, FDI 11~17·21~27)을 한 개 이상 올려 주세요. 잇몸 파일만으로는 계획할 수 없습니다.` | Only `gingiva.stl` was sent |
+| 413 | `파일이 너무 큽니다(파일당 60MB, 한 번에 400MB까지).` | Over 60 MB per file or 400 MB per upload |
+| 400 | `스캔을 읽지 못했습니다: <ExceptionName>` or `스캔을 읽지 못했습니다: 면이 없거나 넓이가 0인 메시 (<file>)` | A mesh couldn't be read. The scan is discarded |
+| 400 | `방향 정렬에 실패했습니다 (<ExceptionName>). 치아 파일이 한 악궁의 것인지 확인하세요.` | Orientation failed, often teeth from different arches |
+| 422 | `[{"type": "missing", "loc": ["body", "files"], "msg": "Field required", ...}]` | No `files` field in the form |
+
+An upload can succeed and still be unplannable. Three teeth uploaded fine, and the check came back with:
+
+```json
+{"n_teeth": 3, "unsupported": ["치아 3개: 악궁을 맞추기에 부족 (6개 이상 필요)"], "ready": false}
+```
+
+The three reasons in `unsupported`:
+
+| Message pattern | Meaning |
+|---|---|
+| `<teeth>번 결손: 결손 공간이 있는 악궁은 아직 계획하지 않음 (연속된 치열만 지원)` | A gap inside the arch |
+| `치아 N개: 악궁을 맞추기에 부족 (6개 이상 필요)` | Fewer than 6 teeth |
+| `<tooth>번 회전 ±N°: 측정 범위(±34°) 끝 — 실제로는 더 돌아 있을 수 있음` | Rotation hit the edge of the measurable range |
+
+Confirming an unsupported scan returns 409 `지원하지 않는 스캔은 계획용으로 확인할 수 없습니다.`
+
+## Anonymous folders
+
+`POST /api/cases/upload` takes Universal names only (`2.stl` … `15.stl`, optional `gingiva.stl`) and returns an `upload-xxxxxxxx` case with no patient and no confirmation step. Setting `CUALIGN_CASE_DIR` to a folder of such files exposes it as case `scan`. Only the patient flow has the input check, so prefer it.
+
+<!-- source: https://cualign.external.kr/docs/planning.md -->
+
+---
+title: Planning
+description: Change a prescription and replan, fix a plan that fails the rules, approve it and download the STL zip. Includes the constraint fields and their tooth numbering.
+order: 4
+updated: 2026-09-28
+---
+
+# Planning
+
+All recipes use the rule engine (`POST /api/plan`), which needs no key. With a key, the chat panel and `POST /chat/stream` drive the same constraints and plans through the agent (see [Agents](agents.md)).
+
+## Recipe: change the prescription and replan
+
+Send only what changes, plus `parent_plan_id` to build on a plan. Every other field is inherited from that plan.
+
+```sh
+# lock FDI 11 (Universal 8) on top of plan pe2399cd3
+curl -s -X POST localhost:8000/api/plan -H 'content-type: application/json' \
+  -d '{"case_id": "poseidon-000131", "parent_plan_id": "pe2399cd3", "lock": [8]}'
+```
+
+```json
+{"chosen": {"plan_id": "p21a525c7", "parent_plan_id": "pe2399cd3", "strategy": "ipr", "n_stages": 9, "passed": true, "...": "..."},
+ "best_failed": null,
+ "tried": [{"plan_id": "p21a525c7", "strategy": "ipr", "n_stages": 9, "months": 2.1, "passed": true, "by_type": {}, "...": "..."},
+           {"plan_id": "p8eae0569", "strategy": "expansion_ipr", "n_stages": 10, "months": 2.3, "passed": true, "by_type": {}, "...": "..."}]}
+```
+
+Each request makes new plan ids. Old plans stay, and a new plan never inherits approval.
+
+Without `parent_plan_id` the patch applies to the case's current constraints, and the result becomes the case's constraints. Changes stick. In our run a `lock: [8]` sent earlier was still on `poseidon-000131` two requests later. Opening the case again (`activate`) resets only `stage_cap` and `order`. Clear a list with `[]`:
+
+```sh
+curl -s -X POST localhost:8000/api/plan -H 'content-type: application/json' \
+  -d '{"case_id": "poseidon-000131", "lock": [], "extraction": []}'
+```
+
+## Recipe: fix a plan that fails the rules
+
+Here a stage cap of 5 is too tight for `poseidon-000131`:
+
+```sh
+curl -s -X POST localhost:8000/api/plan -H 'content-type: application/json' \
+  -d '{"case_id": "poseidon-000131", "parent_plan_id": "pe2399cd3", "stage_cap": 5}'
+```
+
+```json
+{"chosen": null,
+ "best_failed": {"plan_id": "p7b76a665", "strategy": "expansion_ipr", "by_type": {"stage_cap": 1}, "...": "..."},
+ "tried": [{"plan_id": "pb418b209", "strategy": "ipr", "n_stages": 9, "months": 2.1, "passed": false, "by_type": {"stage_cap": 1}},
+           {"plan_id": "p7b76a665", "strategy": "expansion_ipr", "n_stages": 10, "months": 2.3, "passed": false, "by_type": {"stage_cap": 1}}]}
+```
+
+`chosen: null` means no allowed strategy passed. `best_failed` is the one with the fewest violations. Read its violations:
+
+```sh
+curl -s localhost:8000/api/plans/p7b76a665 | jq -c .violations
+```
+
+```json
+[{"stage": null, "type": "stage_cap", "n": 10, "limit": 5}]
+```
+
+It can't be approved (`409 규칙 위반 계획은 승인할 수 없습니다.`). Look up the type in [Rules](rules.md), change the condition that caused it, and replan from the failed plan:
+
+```sh
+curl -s -X POST localhost:8000/api/plan -H 'content-type: application/json' \
+  -d '{"case_id": "poseidon-000131", "parent_plan_id": "p7b76a665", "clear_stage_cap": true}'
+```
+
+```json
+{"chosen": {"plan_id": "p828b61d7", "parent_plan_id": "p7b76a665", "strategy": "ipr", "n_stages": 9, "passed": true, "...": "..."}, "best_failed": null, "...": "..."}
+```
+
+cuAlign never relaxes a condition on its own. Deciding which one to relax is the dentist's call.
+
+## Recipe: approve and download the STL zip
+
+Approval needs `{"confirmed": true}`, zero violations, a review that is `passed` or `skipped`, and, for a patient scan, the confirmed revision the plan was made from.
+
+```sh
+curl -s -X POST localhost:8000/api/plans/pe2399cd3/approval \
+  -H 'content-type: application/json' -d '{"confirmed": true}'
+```
+
+The response is the full plan, with:
+
+```json
+"approval": {"status": "approved", "approved_at": "2026-09-28T05:45:32.687865+00:00", "fingerprint": "3188c663...0e87"}
+```
+
+Approval starts building the zip in the background. Poll it if you like:
+
+```sh
+curl -s localhost:8000/api/plans/pe2399cd3/export-status
+# {"building":true,"done":0,"total":9,"ready":false}   right after approval
+# {"building":false,"done":9,"total":9,"ready":true}   after the download below
+```
+
+Download. The request waits for the build if it isn't done.
+
+```sh
+curl -s -D - -o plan.zip localhost:8000/api/plans/pe2399cd3/stl.zip
+```
+
+```
+HTTP/1.1 200 OK
+x-cualign-print-models: ok; files=9
+content-disposition: attachment; filename="cualign_pe2399cd3_stages.zip"
+```
+
+That zip held 136 files, 60.8 MB: 9 stages × 14 teeth, 9 print models and `print_models/README.txt`. Print models need a `gingiva.stl` in the case. The tooth files carry the prescribed IPR cut.
+
+To withdraw approval: `curl -s -X DELETE localhost:8000/api/plans/pe2399cd3/approval`. The plan comes back with `"approval": null`.
+
+## In the web UI
+
+The UI at `/ui/` is Korean. Pick a case or register a patient («환자 등록»), check the scan, describe the prescription in the chat box, read the plan card and the 3D stages, then approve and download with «확정하고 내려받기». «에이전트 없이 계산» calls the rule engine, «이 조건으로 다시 계산» replans with the form's conditions, and «검토 다시 요청» reruns a missing or failed review. Button labels are from the UI source. These docs didn't drive the UI.
+
+## Constraint fields
+
+The body of `POST /api/plan`, the `constraints` of `/chat/stream` and the MCP tool `cualign_plan` share one schema. `null` or a missing field keeps the current value.
+
+| Field | Type | Numbering | Meaning |
+|---|---|---|---|
+| `extraction` | list of int, 2–15 | Universal | Teeth to extract. `[]` = non-extraction. Only premolars 4, 5, 12, 13 (FDI 15, 14, 24, 25) |
+| `allow_extraction` | bool | | Deprecated. `false` clears `extraction`. `true` without teeth is refused |
+| `lock` | list of int, 2–15 | Universal | Teeth that must not move |
+| `ipr_exclude` | list of int, 2–15 | Universal | Teeth to leave unstripped under the uniform IPR rule |
+| `ipr_limit_mm` | 0–0.25 | | Per tooth surface, uniform rule only |
+| `ipr_surfaces` | list of `[tooth, neighbour, mm]` | **FDI** on input, Universal in responses | IPR per contact, split half and half. Only these contacts are stripped. Max 0.5 mm per contact |
+| `stage_cap` | int > 0 | | Maximum stages. 12 months = 52 |
+| `clear_stage_cap` | bool | | Drops the cap. Can't be sent with `stage_cap` |
+| `order` | `simultaneous`, `anterior_first`, `sequential` | | Move order |
+
+`POST /api/plan` also takes `case_id` and `parent_plan_id`.
+
+Which strategies run depends on the prescription:
+
+| Prescription | Strategies tried |
+|---|---|
+| `extraction` has teeth | `extraction` only |
+| `ipr_surfaces` set | `ipr`, `expansion_ipr` |
+| Neither | `expansion`, `ipr`, `expansion_ipr` |
+
+Tooth numbering at a glance: FDI 18–11 = Universal 1–8, FDI 21–28 = Universal 9–16. Third molars (1, 16) are never planned.
+
+<!-- source: https://cualign.external.kr/docs/rules.md -->
+
+---
+title: Rules
+description: Every violation type the rule check returns, its fields and usual fix, the numeric limits from the code, and the conditions for approval.
+order: 5
+updated: 2026-09-28
+---
+
+# Rules
+
+Every plan is checked stage by stage. A plan passes when `violations` is empty. Violations show up in three places: `violations` on `GET /api/plans/{id}`, a count per type in `by_type` on every plan summary, and the reviewer's memo.
+
+## Violation types
+
+`stage` is the aligner number (1-based), or `null` for a whole-plan violation. Tooth numbers are Universal.
+
+| `type` | Fields | Fires when | Usual fix |
+|---|---|---|---|
+| `space_deficit` | `mm`, `limit` | The strategy leaves more than 0.5 mm of crowding unresolved | Next strategy. If extraction is forbidden and nothing passes, report the missing mm |
+| `collision` | `stage`, `teeth` [a, b], `overlap_mm3`, `baseline` | Two neighbouring crowns overlap more than 1.0 mm³ beyond their starting overlap | A strategy that makes space first, or another move order |
+| `move_limit` | `stage`, `teeth`, `mm`, `limit` | A tooth moves more than 0.25 mm between consecutive aligners | More stages, if the cap allows |
+| `rotation_limit` | `stage`, `teeth`, `deg`, `limit` | A tooth turns more than 2.0° between consecutive aligners | More stages, if the cap allows |
+| `stage_cap` | `n`, `limit` | The plan has more stages than `stage_cap` | Less total movement, `simultaneous` order, or a looser time limit from the dentist |
+| `locked_tooth` | `stage`, `teeth` | A locked tooth moved | Unlock it or pick another strategy |
+| `extraction_forbidden` | `teeth` | Teeth were removed without an extraction prescription | Prescribe the teeth or stay non-extraction |
+| `extraction_mismatch` | `teeth`, `prescribed`, `removed` | The removed teeth differ from the prescribed ones | Check the prescription |
+| `extraction_space_open` | `mm`, `limit` | More than 0.5 mm of extraction space can't be closed, for example because a molar is locked | Unlock teeth around the space |
+| `ipr_limit` | `mm`, `limit` | IPR per surface exceeds `ipr_limit_mm` | Raise the limit (max 0.25) or add space another way |
+| `ipr_excluded` | `teeth` | IPR landed on a tooth in `ipr_exclude` | Remove it from the list or use another strategy |
+| `ipr_unprescribed` | `surfaces`, `teeth` | IPR on a contact or amount the `ipr_surfaces` prescription doesn't name | Check the prescription |
+
+Real example, from a plan capped at 5 stages:
+
+```json
+[{"stage": null, "type": "stage_cap", "n": 10, "limit": 5}]
+```
+
+## Limits in the code
+
+From `src/cualign/core/limits.py` and `planner.py`. These are PoC settings, not patient-specific clinical values.
+
+| Constant | Value | Used for |
+|---|---|---|
+| `MAX_LINEAR_PER_ALIGNER` | 0.25 mm | `move_limit` |
+| `MAX_ROTATION_PER_ALIGNER` | 2.0° | `rotation_limit` |
+| `MAX_ANGULAR_PER_ALIGNER` | 1.0° | Defined, not enforced (translation-only staging) |
+| `IPR_PER_SURFACE` | 0.25 mm | Cap of `ipr_limit_mm`. A contact is two surfaces, so 0.5 mm per contact |
+| `MAX_EXPANSION_PER_SIDE` | 2.0 mm | Arch expansion |
+| `EXTRACTION_THRESHOLD_MM` | 8.0 mm | Space deficit above which extraction is worth considering |
+| `SPACE_DEFICIT_TOLERANCE_MM` | 0.5 mm | `space_deficit`, `extraction_space_open` |
+| `NEW_OVERLAP_MM3` | 1.0 mm³ | `collision` |
+| `ROTATION_MIN_DEG` | 3.0° | Smallest rotation the planner corrects |
+| `VERTICAL_MIN_MM` | 1.0 mm | Smallest height difference from the neighbours it corrects |
+| `MD_SEARCH_LIMIT_DEG` | 34.0° | A measured rotation this large makes the scan unsupported |
+| `WEAR_DAYS` / `DAYS_PER_MONTH` | 7 / 30.4 | `months = round(n_stages × 7 / 30.4, 1)` and `stage_cap = round(months × 30.4 / 7)` |
+
+Sources the code cites for the clinical numbers: MDPI Applied Sciences 2024 staging review, Nature IJOS 2025 expert consensus, Align Technology 2016 press release.
+
+## Approval conditions
+
+`POST /api/plans/{id}/approval` with `{"confirmed": true}` succeeds only when all of these hold:
+
+| Condition | Error when it fails |
+|---|---|
+| Body has `"confirmed": true` | 400 `의사의 명시적 확인이 필요합니다.` |
+| `violations` is empty | 409 `규칙 위반 계획은 승인할 수 없습니다.` |
+| `review.status` is `passed` or `skipped` | 409 `검토가 완료되지 않았습니다. 검토 실패/미실행 계획은 승인할 수 없습니다.` |
+| Patient scan confirmed | 409 `입력 확인 전 스캔입니다. 입력 확인 화면에서 치아 번호와 방향을 확인한 뒤 계획하세요.` |
+| Plan made from the scan's current revision | 409 `스캔 번호가 바뀐 뒤의 이전 계획입니다. 새 입력으로 다시 계획하세요.` |
+| Scan not deleted | 409 `삭제된 스캔입니다.` |
+
+A rule pass isn't a clinical judgement. The download checks approval again against a stored fingerprint of the plan, so a changed plan needs a new approval.
+
+<!-- source: https://cualign.external.kr/docs/agents.md -->
+
+---
+title: For agents
+description: Call cuAlign from another agent through its MCP server at /mcp (5 tools, bearer token) or through /chat/stream SSE, with the call order, real tool results, and what an agent must never do.
+order: 6
+updated: 2026-09-28
+---
+
+# For agents
+
+cuAlign exposes itself two ways. `/mcp` is a Streamable HTTP MCP server with five tools, built for a front-desk agent such as OpenClaw in a NemoClaw sandbox. `/chat/stream` is the NAT chat endpoint the web UI uses. Both reach the same planning agent, so both need `NVIDIA_API_KEY` on the server for planning.
+
+## Rules for a calling agent
+
+- Send the dentist's words in Korean as `request`. Don't compute stages, movements or months yourself, and don't change the numbers cuAlign returns.
+- Never pick extraction teeth. If extraction is allowed but no teeth are named, ask the dentist.
+- Never approve or export. Approval is the dentist's, in the UI (`ui_url`). `cualign_approve_plan` always refuses. `cualign_export_stl` only returns a link after the dentist approved.
+- Never send patient names, contact details or scan files. Tools see case ids like `P0001-S1`. Scans enter through the UI or the [scan API](scans.md).
+- Call `cualign_plan` once per request. It takes 63–156 s per call in the project's own measurements (not remeasured here). Set your MCP client timeout to at least 120 s. On `status: "error"`, report the message and don't loop.
+
+## Recipe: connect to the MCP server
+
+Start the server with a token. Any of these is enough:
+
+```sh
+CUALIGN_MCP_TOKEN=<token> uv run cualign serve --host 127.0.0.1
+# or, where the raw token can't reach the process (OpenShell sandbox):
+CUALIGN_MCP_TOKEN_SHA256=$(printf %s "$TOKEN" | shasum -a 256 | cut -d' ' -f1) uv run cualign serve
+```
+
+With neither set, `/mcp` answers 503 `MCP is disabled: no token is configured`. The UI and HTTP API don't need the token.
+
+Every request carries `Authorization: Bearer <token>` and `Accept: application/json, text/event-stream`. Sessions are stateless and answers are plain JSON:
+
+```sh
+curl -s -X POST http://127.0.0.1:8000/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -H "authorization: Bearer $TOKEN" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
+```
+
+```json
+{"protocolVersion": "2025-06-18", "serverInfo": {"name": "cualign", "version": "1.30.0"},
+ "instructions": "cuAlign drafts clear-aligner staging plans for a dentist. Call cualign_list_cases first, then cualign_plan with the case and the dentist's request. Every plan is a draft: the dentist reviews and approves it in the cuAlign UI (ui_url), never through these tools."}
+```
+
+(`result` only, from the real response.) Hosts other than `127.0.0.1` and `localhost` must be listed in `CUALIGN_MCP_ALLOWED_HOSTS`, or the server answers 421 `Invalid Host header`. Links in tool results use `CUALIGN_PUBLIC_URL`, default `http://localhost:8000`.
+
+## Recipe: run the whole flow from an agent
+
+Tool results arrive as JSON text in `result.content[0].text`. The results below come from a keyless server, so `cualign_plan` fails and the plan was made with `POST /api/plan` instead.
+
+**1. List cases.**
+
+```json
+// tools/call cualign_list_cases {}
+{"active": "P0001-S1",
+ "cases": [{"case_id": "poseidon-000097", "kind": "sample", "...": "..."},
+           {"case_id": "poseidon-000001", "kind": "sample"}, {"case_id": "poseidon-000131", "kind": "sample"},
+           {"case_id": "aligned", "kind": "synthetic"}, {"case_id": "mild", "kind": "synthetic"},
+           {"case_id": "moderate", "kind": "synthetic"}, {"case_id": "severe", "kind": "synthetic"},
+           {"case_id": "extraction", "kind": "synthetic"}]}
+```
+
+Patient scans aren't listed. Take the patient case id (`P0001-S1`) from the dentist.
+
+**2. Plan.**
+
+```json
+// tools/call cualign_plan {"case_id": "poseidon-000131", "request": "처방대로 단계 계획을 짜 주세요."}
+{"status": "error", "answer": "", "tools": [], "note": "초안입니다. 최종 판단과 승인은 의사가 cuAlign 화면에서 합니다.",
+ "message": "NVIDIA API 가 서버의 키를 거부했습니다 (HTTP 401/403). 서버의 NVIDIA_API_KEY 를 확인하세요."}
+```
+
+With a key, `status` is `planned`, `answer` holds the agent's Korean answer, `tools` the tool names it called, and `plan` the same summary `cualign_get_plan` returns, plus `reviewed_by_server`. `no_plan` means the turn ended without selecting one (a question back, for example). This path wasn't run, because no key was available.
+
+**3. Read the plan.**
+
+```json
+// tools/call cualign_get_plan {"plan_id": "p63215c9e"}
+{"plan_id": "p63215c9e", "case_id": "P0001-S1", "parent_plan_id": null, "strategy": "ipr", "n_stages": 9, "months": 2.1,
+ "passed": true, "violations": 0, "by_type": {}, "constraints": {"...": "..."},
+ "review": {"status": "skipped", "...": "..."}, "approval": null, "input_stale": false, "previous_calculation": false,
+ "reviewer_memo": "규칙 폴백 — 검토 에이전트 미실행", "ui_url": "http://localhost:8000/ui/?plan=p63215c9e"}
+```
+
+Report strategy, stage count, months, pass or violation counts, the reviewer memo verbatim, and `ui_url`.
+
+**4. Hand approval to the dentist.** Both tools refuse until the dentist acts:
+
+```json
+// tools/call cualign_approve_plan {"plan_id": "p63215c9e"}
+{"status": "refused", "approval": null, "ui_url": "http://localhost:8000/ui/?plan=p63215c9e",
+ "message": "승인은 의사가 cuAlign 화면에서만 할 수 있습니다."}
+
+// tools/call cualign_export_stl {"plan_id": "p63215c9e"}   before approval
+{"status": "refused", "message": "의사가 현재 계획을 승인한 뒤 내보낼 수 있습니다.", "ui_url": "http://localhost:8000/ui/?plan=p63215c9e"}
+```
+
+**5. After the dentist approved in the UI:**
+
+```json
+// tools/call cualign_export_stl {"plan_id": "p63215c9e"}
+{"status": "approved", "download_url": "http://localhost:8000/api/plans/p63215c9e/stl.zip"}
+```
+
+Unknown ids come back as `{"status": "error", "message": "unknown plan pnope"}` or `unknown case nope`.
+
+## MCP tools
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `cualign_list_cases` | none | `cases`, `active` |
+| `cualign_plan` | `case_id` (required), `request` (required, Korean), `constraints` (optional, see [constraint fields](planning.md#constraint-fields)), `base_plan_id` (optional, revise this plan) | `status` (`planned`, `no_plan`, `error`), `answer`, `tools`, `note`, `plan`, `reviewed_by_server`, `message` |
+| `cualign_get_plan` | `plan_id` | Plan summary with `reviewer_memo` and `ui_url` |
+| `cualign_approve_plan` | `plan_id` | Always `status: "refused"` with `ui_url` |
+| `cualign_export_stl` | `plan_id` | `download_url` once approved, else `refused` |
+
+`cualign_plan` activates the case, then posts to the server's own `/chat/stream`, so Guardrails, the reviewer and the server context apply as they do for the UI. It waits up to 600 s.
+
+In NemoClaw, the tool names get a `cualign__` prefix (`cualign__cualign_plan`) and the policy denies `cualign_approve_plan` and `cualign_export_stl` again at the proxy. Setup: `docs/nemoclaw.md` in the repository.
+
+## Recipe: call /chat/stream directly
+
+The body is NAT's chat request plus a `cualign` object and an optional `step`:
+
+```json
+{"messages": [{"role": "user", "content": "처방대로 단계 계획을 짜 주세요."}],
+ "cualign": {"case_id": "poseidon-000131", "request_id": "optional, 1-128 chars",
+             "base_plan_id": null, "constraints": {}},
+ "step": "stages"}
+```
+
+`step` is `setup` (read the prescription into constraints and stop), `target` (make a target arrangement and stop) or `stages` (the default: plan, select, review). Send `Accept: text/event-stream`.
+
+After NAT's own frames, cuAlign appends its events at the end of the stream. From a keyless run:
+
+```
+{"code":"workflow_error","message":"NVIDIA API 가 서버의 키를 거부했습니다 (HTTP 401/403). 서버의 NVIDIA_API_KEY 를 확인하세요.","details":"RuntimeError"}
+
+event: plan_error
+data: {"request_id": "abfa24bc15f44bf2bb384683c73533f6", "case_id": "poseidon-000131", "kind": "nim_auth", "message": "NVIDIA API 가 서버의 키를 거부했습니다 (HTTP 401/403). 서버의 NVIDIA_API_KEY 를 확인하세요."}
+
+event: plan_context
+data: {"request_id": "abfa24bc15f44bf2bb384683c73533f6", "case_id": "poseidon-000131", "constraints": {"...": "..."}, "rails": "off"}
+```
+
+| Event | When | Payload |
+|---|---|---|
+| `plan_selected` | The agent selected a plan | `request_id`, `case_id`, `schema_version` 1, `plan_id`, `parent_plan_id`, `review`, `reviewed_by_server` |
+| `plan_error` | The turn failed, or plans were made but none selected | `request_id`, `case_id`, `message`, and `kind` when the turn failed (`nim_auth`, `nim_overload`, `no_answer`, `workflow_error`) |
+| `plan_context` | Every turn | `constraints` in force, `rails` (`passed`, `flagged`, `off`, `error`, `blocked`) |
+| `step_done` | A step finished | `step` plus `constraints` and `conditions_ko` (setup), `target_id` and `summary` (target), `plan_id` and `target_id` (stages) |
+
+A bad `cualign` object is refused before the model runs: 400 `Invalid case, parent plan or constraints`, or 400 with the extraction message when extraction is allowed without teeth. `reviewed_by_server: true` means the agent skipped the reviewer and the server ran it. `kind: "nim_overload"` and `no_answer` (`모델이 계획 대신 자기 추론문만 돌려보내 답을 만들지 못했습니다. 같은 요청을 다시 보내 주세요.`) are worth one resend. `nim_auth` needs a valid key on the server.
+
+<!-- source: https://cualign.external.kr/docs/api.md -->
+
+---
+title: HTTP API
+description: Every route in server/api.py with method, body, main response fields and error codes, plus /mcp, /chat/stream and the NAT routes. Default base URL http://localhost:8000.
+order: 7
+updated: 2026-09-28
+---
+
+# HTTP API
+
+Base URL `http://localhost:8000`. JSON in, JSON out. Errors come as `{"detail": "..."}`, with the Korean message the UI shows. Body validation errors are FastAPI's 422 with a `detail` list. There is no authentication except on `/mcp`, and no per-user isolation. Run it on a trusted machine.
+
+"Run" marks the routes called for these docs. The rest are described from `src/cualign/server/api.py`.
+
+## Cases
+
+| Method and path | Body or query | Response | Errors | Run |
+|---|---|---|---|---|
+| `GET /api/cases` | | `cases` and `active`. Samples carry `prescription`, `request` and `constraints`, synthetic presets carry `crowding_mm`, and a `scan` row appears when `CUALIGN_CASE_DIR` is set | | yes |
+| `GET /api/case-list` | | `cases`: one row per sample and patient scan with `status` (`scan_check`, `plan_needed`, `violation`, `awaiting_approval`, `approved`), `status_ko`, `plan` (representative plan: newest approved, else newest), `n_plans` | | yes |
+| `POST /api/cases/{case_id}/activate` | | `case_id`, `n_teeth`, `crowding_mm`, `constraints`, `active_plan`, `flow`, `unsupported` | 404 unknown case | yes |
+| `GET /api/cases/{case_id}/check` | | Input check: `teeth`, `n_teeth`, `missing`, `outside`, `widths_mm`, `crowding_mm`, `rotation_deg`, `vertical_mm`, `scanned_gingiva`, `unsupported`, `ready`, plus `orientation`, `revision`, `confirmed`, `confirmed_at` for patient scans | 404 | yes |
+| `GET /api/cases/{case_id}/mesh` | `?plan_id=`, `?target_id=` | Viewer data: `teeth`, `ids`, `arch`, `arch_order`, `gum`, `gum_filled`, `gum_fill`, `teeth_cut`, `ipr_cut`, `plan_id`, `name` | 404 | yes |
+| `GET /api/cases/{case_id}/gum` | | `gum`, `gum_filled`, `gum_fill` | 404 | yes |
+| `GET /api/cases/{case_id}/targets/{target_id}` | | A target shaped like a one-stage plan: `stages`, `rotations`, `pivots`, `info`, `summary`, `constraints`, `violations: []` | 404 `목표 배열이 없습니다` | yes |
+| `GET /api/cases/{case_id}/targets/{target_id}/cut` | | `plan_id: null`, `target_id`, `teeth_cut`, `ipr_cut` | 404 | yes |
+| `POST /api/cases/upload` | multipart `files`, Universal names | `case_id` (`upload-xxxxxxxx`), `n_teeth`, `crowding_mm` | 400 when no tooth file | yes |
+| `POST /api/cases/{case_id}/replay` | `{"step": "setup" \| "target" \| "stages" \| "plan" \| "cap" \| "compare", "base_plan_id": null}` | `recorded`, `step`, `answer_md`, `recorded_at`, `plan_selected`, `plans`, and per step `constraints`, `conditions_ko` or `target_id`, `summary` | 404 `녹화된 답이 없습니다` (samples only), 400 bad constraints, 409 base plan from an older core | yes |
+
+## Patients and scans
+
+| Method and path | Body | Response | Errors | Run |
+|---|---|---|---|---|
+| `GET /api/patients` | | `patients` with `n_scans` | | yes |
+| `POST /api/patients` | `{"alias": "≤40 chars", "memo": "≤200 chars"}` | `patient_id` (`P0001`), `alias`, `memo`, `created_at`, `scans`, `last_scan` | 400 empty alias or personal data, 422 too long | yes |
+| `GET /api/patients/{pid}` | | Patient with `scans`, each with a `plans` count | 404 | yes |
+| `DELETE /api/patients/{pid}` | | `deleted`, `scans`, `plans` (counts removed) | 404 | no |
+| `POST /api/patients/{pid}/scans` | multipart `files`: `<tooth>.stl`, optional `gingiva.stl` | Scan (`scan_id`, `case_id`, `arch`, `teeth`, `gingiva`, `orientation`, `revision`, `confirmed_revision`, ...) plus `check` | 400, 404, 413, 422. See [Scans](scans.md#what-gets-rejected) | yes |
+| `POST /api/patients/{pid}/scans/{sid}/confirm` | `{"revision": N}` (optional) | The scan with `confirmed_revision`, `confirmed_at` | 404, 409 unsupported scan, 409 stale revision | yes |
+| `POST /api/patients/{pid}/scans/{sid}/mirror` | | A new check. Bumps `revision`, clears approval of that scan's plans | 404 | yes |
+| `DELETE /api/patients/{pid}/scans/{sid}` | | The patient | 404 | yes |
+
+## Plans
+
+| Method and path | Body or query | Response | Errors | Run |
+|---|---|---|---|---|
+| `POST /api/plan` | [Constraint fields](planning.md#constraint-fields) plus `case_id`, `parent_plan_id` | `case_id`, `chosen` (first passing plan or `null`), `tried` (one summary per strategy), `best_failed` (when nothing passed), or `unsupported` with an empty `tried` | 400 with the constraint or input message | yes |
+| `GET /api/plans` | `?case_id=` | `plans`: summaries, newest first | | yes |
+| `GET /api/plans/{plan_id}` | | Full plan: `plan_id`, `case_id`, `parent_plan_id`, `strategy`, `constraints`, `stage_cap`, `stages` (per stage, `{"<tooth>": [x, y, z]}` displacement in mm), `rotations` (degrees), `pivots`, `target`, `info`, `violations`, `passed`, `review`, `approval`, `input_revision`, `input_stale`, `previous_calculation` | 404 `unknown plan <id>` | yes |
+| `GET /api/plans/{plan_id}/cut` | | `plan_id`, `teeth_cut`, `ipr_cut` (`{"<tooth>": {"mm", "faces"}}`) | 404 | yes |
+| `POST /api/plans/{plan_id}/approval` | `{"confirmed": true}` | Full plan with `approval: {status, approved_at, fingerprint}`. Starts the zip build | 400, 404, 409. See [Rules](rules.md#approval-conditions) | yes |
+| `DELETE /api/plans/{plan_id}/approval` | | Full plan with `approval: null` | 404 | yes |
+| `GET /api/plans/{plan_id}/export-status` | | `building`, `done`, `total`, `ready` | 404 | yes |
+| `GET /api/plans/{plan_id}/stl.zip` | | The zip. Header `X-Cualign-Print-Models: <status>; files=<n>[; reason=...]` | 404, 409 not approved or stale input, 500 build failed | yes |
+| `POST /api/plans/{plan_id}/review` | | Full plan after a new review | 404, 409 `미실행이거나 실패한 검토만 다시 요청할 수 있습니다.` (only `not_requested` or `failed` can be retried), 503 `검토 모델이 연결되지 않았습니다.` | 409 only |
+
+Plan summary fields (in `tried`, `chosen`, `GET /api/plans` and MCP): `plan_id`, `case_id`, `parent_plan_id`, `strategy`, `n_stages`, `months`, `passed`, `violations` (count), `by_type`, `constraints`, `review`, `approval`, `input_stale`, `previous_calculation`.
+
+`review.status` is one of `not_requested`, `running`, `passed`, `failed`, `skipped`. `previous_calculation: true` marks a patient plan made by an older planner version. It's listed but can't be a base plan.
+
+## Chat, MCP and other
+
+| Method and path | Notes | Run |
+|---|---|---|
+| `POST /chat/stream` | NAT chat with cuAlign's `cualign` context and events. See [Agents](agents.md#recipe-call-chatstream-directly) | keyless only |
+| `POST /mcp` (also GET, DELETE) | MCP Streamable HTTP, bearer token. See [Agents](agents.md) | yes |
+| `POST /api/followup` | `{"messages": [...]}` (≤200) → `{"question": {...} \| null}`. Suggested next question card. Never fails the screen | yes (`null`) |
+| `GET /health` | `{"status": "healthy"}` | yes |
+| `GET /` | 307 to `/ui/` | yes |
+| `GET /ui/` | The web UI (static files) | yes |
+| NAT routes | `/chat`, `/v1/chat`, `/v1/chat/stream`, `/v1/chat/completions`, `/generate`, `/generate/stream`, `/generate/full`, `/v1/workflow`, `/v1/workflow/stream`, `/v1/workflow/full`, `/v1/workflow/atif`, `/executions/...`, `/evaluate/item`, `/auth/redirect`. They run the same workflow with Guardrails, but only `/chat/stream` adds the case context and plan events | listed from `/openapi.json` |
+
+<!-- source: https://cualign.external.kr/docs/cli.md -->
+
+---
+title: CLI
+description: The four cualign commands (plan, serve, cases build, bench), every option, the Korean sentences `cualign plan` understands, and its refusal messages.
+order: 8
+updated: 2026-09-28
+---
+
+# CLI
+
+Run from `apps/cualign-prototype/` as `uv run cualign <command>`. All outputs below are from real runs.
+
+| Command | Options | Does |
+|---|---|---|
+| `cualign plan REQUEST` | `--case` (default `moderate`), `--export` (always refused) | Rule-based plan from a Korean sentence. No model |
+| `cualign serve` | `--host` (default `0.0.0.0`), `--port` (default `8000`) | Loads `.env`, then runs `nat serve --config_file configs/workflow.yml` |
+| `cualign cases build` | `--out` (default `data/cases`) | Writes the 5 synthetic presets as per-tooth STL folders |
+| `cualign bench` | `--out` (default `bench/results.md`) | Runs the strategy ladder on the presets and writes a Markdown table |
+
+`serve` binds to all interfaces by default. Pass `--host 127.0.0.1` on a shared network, since the server has no authentication.
+
+## cualign plan
+
+```sh
+uv run cualign plan "14번과 24번 발치로" --case extraction
+```
+
+```
+[요청] 14번과 24번 발치로
+[제약] {"extraction": [5, 12], "months": null, "stage_cap": null, "order": "simultaneous", "ipr_surfaces": null}
+[시도] extraction      10장  2.3개월  통과
+[결과] extraction · 10장 · 2.3개월 · plan p3aeb0877
+[완료] 1.4s · 이 계획은 초안입니다. 최종 판단은 의사가 합니다.
+```
+
+`--case` takes a sample id (`poseidon-000097`, `poseidon-000001`, `poseidon-000131`), a preset (`aligned`, `mild`, `moderate`, `severe`, `extraction`) or a folder of per-tooth STL files. The plan is stored like any other and shows up in the server if both use the same `CUALIGN_OUT`.
+
+What the parser reads (`parse_constraints` in `cli.py`):
+
+| Sentence contains | Becomes |
+|---|---|
+| `14번과 24번 발치`, `14·24 발치`, `발치 치아: 14, 24` | `extraction` [5, 12]. Teeth are FDI |
+| `비발치`, `발치 없이`, `발치 금지`, `발치는 싫` | `extraction` [] |
+| `발치` alone | Refused: teeth needed |
+| `12개월` | `months` 12, `stage_cap` 52 |
+| `40장` | `stage_cap` 40, overriding months |
+| `앞니 먼저`, `앞니부터`, `총생부터` | `order` `anterior_first` |
+| `IPR 11-21·11-12·21-22 각 0.4mm` | `ipr_surfaces` at those FDI contacts, 0.4 mm each |
+| `IPR 14-15·24-25부터 앞쪽으로 총 3.6mm` | Every contact from those forward to 11-21, 3.6 mm shared evenly |
+| `IPR 11-21·21-22 총 0.8mm` | 0.8 mm shared over the named contacts |
+
+With nothing about extraction, the case's own prescription decides.
+
+```sh
+uv run cualign plan "발치 없이 IPR 11-21·11-12·21-22 각 0.4mm" --case poseidon-000131
+```
+
+```
+[제약] {"extraction": [], "months": null, "stage_cap": null, "order": "simultaneous", "ipr_surfaces": [[7, 8, 0.4], [8, 9, 0.4], [9, 10, 0.4]]}
+[시도] ipr              9장  2.1개월  통과
+[시도] expansion_ipr   10장  2.3개월  통과
+[결과] ipr · 9장 · 2.1개월 · plan p253c0fcc
+```
+
+Refusals (exit code 1):
+
+| Input | Message |
+|---|---|
+| `"발치 허용"` | `[확인 필요] 발치할 치아 번호를 함께 적어 주세요(FDI, 예: "14번과 24번 발치"). 앱은 발치 치아를 고르지 않습니다.` |
+| `"5번과 12번 발치로"` | `[확인 필요] 발치 치아는 상악 FDI 번호(11~18, 21~28)로 적어 주세요(예: "14번과 24번 발치").` |
+| `"14번과 24번 발치 금지"` | `[확인 필요] 발치할 치아와 금지·변경 표현이 함께 있어 처방을 판단할 수 없습니다. "14번과 24번 발치" 또는 "발치 없이"처럼 처방만 적어 주세요.` |
+| any, with `--export out.zip` | `[거부] CLI 초안은 미승인입니다. UI에서 계획 생성·의사 승인 후 다운로드하세요.` |
+
+When every allowed strategy fails, the result line reads `[결과] 허용 전략 전부 실패 — 최선 <strategy> (<by_type>). 조건 완화가 필요합니다.`
+
+## cualign cases build
+
+```sh
+uv run cualign cases build --out /tmp/cases
+```
+
+```
+[cases] aligned     -> /tmp/cases/aligned
+[cases] mild        -> /tmp/cases/mild
+[cases] moderate    -> /tmp/cases/moderate
+[cases] severe      -> /tmp/cases/severe
+[cases] extraction  -> /tmp/cases/extraction
+```
+
+Took 3.2 s. Each folder holds `2.stl` … `15.stl`.
+
+## cualign bench
+
+```sh
+uv run cualign bench --out /tmp/bench.md
+```
+
+Took 2 min 20 s here. The table has one row per preset: crowding, the ladder's result with and without extraction, strategies tried, violations caught, and a naive plan for comparison. Numbers change with the planner version, so the committed `bench/results.md` may not match a fresh run.
+
+## cualign serve
+
+```sh
+uv run cualign serve --host 127.0.0.1 --port 8000
+```
+
+Without `NVIDIA_API_KEY` it prints `[warn] NVIDIA_API_KEY not set — the agent will fail; /ui and the rule-based fallback still work` and starts anyway. The warning goes to stdout right before the process is replaced by NAT, so it may not show when stdout isn't a terminal. It didn't appear in our log file. See [Configuration](configuration.md) for the environment it reads.
+
+<!-- source: https://cualign.external.kr/docs/configuration.md -->
+
+---
+title: Configuration
+description: Every environment variable cuAlign reads (key, output folder, Guardrails, MCP token and hosts, public URL), with defaults from the code, and where data is written.
+order: 9
+updated: 2026-09-28
+---
+
+# Configuration
+
+`cualign serve` loads `.env` from `apps/cualign-prototype/`. Start from `.env.example`. Never commit a real key.
+
+## Environment variables
+
+Found by searching the source for `os.environ` and `getenv`.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NVIDIA_API_KEY` | none | Key for NIM (planner, reviewer, Guardrails, follow-up card). Counted as present when it starts with `nvapi-`, or with `openshell:resolve:env:` inside an OpenShell sandbox. Without it, chat fails and Guardrails turn off |
+| `CUALIGN_OUT` | `out` (relative to the working directory) | Where plans (`plans/p*.json`), zips (`stl/`), patients and scans (`patients/`) and anonymous uploads (`uploads/`) go. Plans in `plans/` are loaded again on restart |
+| `CUALIGN_CASE_DIR` | none | A folder of Universal-named per-tooth STL files, exposed as case `scan` and used as the default case |
+| `CUALIGN_GUARDRAILS` | `1` | `0` turns Guardrails off (logged at ERROR) |
+| `CUALIGN_RAILS_FAIL_CLOSED` | off | `1` refuses a turn when a rail errors, and stops startup when there's no key |
+| `CUALIGN_RAILS_TIMEOUT` | `25` | Seconds per rail check |
+| `CUALIGN_CONTENT_SAFETY_INPUT` | `advisory` | `block` makes the input content-safety check blocking. Otherwise it only flags |
+| `CUALIGN_MCP_TOKEN` | none | Bearer token for `/mcp` |
+| `CUALIGN_MCP_TOKEN_SHA256` | none | Hex SHA-256 of the token. Takes priority over `CUALIGN_MCP_TOKEN`. Use it in a sandbox where the raw token can't reach the process |
+| `CUALIGN_MCP_ALLOWED_HOSTS` | none | Extra `Host` values `/mcp` accepts, comma-separated (`192.168.5.2,192.168.5.2:8443`). `127.0.0.1` and `localhost` are always allowed |
+| `CUALIGN_PUBLIC_URL` | `http://localhost:8000` | Base of `ui_url` and `download_url` in MCP results |
+| `CUALIGN_TGN_DIR` | none | ToothGroupNetwork checkout for experimental scan segmentation |
+| `NAT_TELEMETRY_ENABLED` | set to `0` by `cualign serve` | NAT CLI usage telemetry |
+| `NEMO_GUARDRAILS_NO_USAGE_STATS` | set to `1` when Guardrails start | Guardrails usage stats |
+
+When `HTTPS_PROXY`, `https_proxy`, `ALL_PROXY` or `all_proxy` is set, the NIM client's aiohttp sessions go through that proxy (`sandbox_compat.py`, for OpenShell).
+
+## Models and retries
+
+Set in `configs/workflow.yml`, not in environment variables.
+
+| Setting | Value |
+|---|---|
+| Planner and reviewer model | `nvidia/nemotron-3-super-120b-a12b`, temperature 0 |
+| Reviewer | 2 attempts, 20 s per call, 40 s total |
+| Follow-up question card | `nvidia/nemotron-3.5-lightning-30b-a3b` |
+| Stream retries on 429 and 5xx | after 1, 2, 4, 8, 16, 32 s (up to 63 s per model call) |
+| Non-stream retries | after 1, 2, 4 s |
+| Overload message | `NVIDIA API가 일시적으로 과부하 상태입니다. 다시 시도해 주세요.` |
+
+## Where things are written
+
+```
+$CUALIGN_OUT/
+  plans/p*.json                 one file per plan, reloaded on start
+  stl/<plan_id>.zip             export cache, rebuilt when the approval fingerprint changes
+  patients/_ids.json            id counters (ids are never reused)
+  patients/P0001/patient.json
+  patients/P0001/scans/S1/<tooth>.stl, gingiva.stl, original/
+  uploads/<id>/                 POST /api/cases/upload
+```
+
+Constraints per case and the step flow live in memory only and reset on restart.
+
+<!-- source: https://cualign.external.kr/docs/troubleshooting.md -->
+
+---
+title: Troubleshooting
+description: Error messages from cuAlign's server, CLI, MCP and chat stream, matched to cause and fix. Search this page for the exact text you got.
+order: 10
+updated: 2026-09-28
+---
+
+# Troubleshooting
+
+Messages are copied from the code. Most are Korean because the UI is. Search for the text you got.
+
+## Chat and agent
+
+| You see | Cause | Fix |
+|---|---|---|
+| `plan_error` with `kind: "nim_auth"`, `NVIDIA API 가 서버의 키를 거부했습니다 (HTTP 401/403). 서버의 NVIDIA_API_KEY 를 확인하세요.` | No key, or a rejected key | Set `NVIDIA_API_KEY=nvapi-...` in `.env` and restart. Meanwhile use `POST /api/plan` or a replay |
+| `plan_error` with `kind: "nim_overload"`, `NVIDIA API가 일시적으로 과부하 상태입니다. 다시 시도해 주세요.` | NIM kept answering 429 or 5xx after the retries (up to 63 s) | Send the same request again |
+| `plan_error` with `kind: "no_answer"`, `모델이 계획 대신 자기 추론문만 돌려보내 답을 만들지 못했습니다. 같은 요청을 다시 보내 주세요.` | The model returned only its reasoning | Send the same request again |
+| `plan_error`, `계획은 생성됐으나 최종 선택을 받지 못했습니다.` | The agent made plans but never selected one | Pick one from `GET /api/plans?case_id=...`, or ask again |
+| 400 `Invalid case, parent plan or constraints` | Unknown `case_id`, a `base_plan_id` from another case or an older planner, or a bad constraint | Check the ids against `GET /api/cases` and `GET /api/plans` |
+| 400 `발치할 치아 번호가 필요합니다(예: 14번과 24번). 앱은 발치 치아를 고르지 않습니다.` | `allow_extraction: true` without teeth | Send `extraction` with the prescribed teeth, or ask the dentist |
+| 409 `이전 계산의 계획입니다(계산 코어가 바뀌었습니다). 이 계획을 기준으로 이어갈 수 없으니 다시 계산해 주세요.` from replay, or 400 `Invalid case, parent plan or constraints` from chat | `base_plan_id` points at a plan made by an older planner version (`previous_calculation: true`) | Plan again without it |
+| Plan card with review `failed` and approval blocked | The reviewer failed twice or ran out of 40 s | `POST /api/plans/{id}/review` (UI: «검토 다시 요청») |
+| `reviewed_by_server: true` | The agent skipped the reviewer, so the server ran it | Nothing to fix. The turn took longer |
+| Chat works but Guardrails log `Guardrails OFF` | No key, or `CUALIGN_GUARDRAILS=0` | Set the key. Use `CUALIGN_RAILS_FAIL_CLOSED=1` to refuse instead of running without rails |
+
+## Planning
+
+| You see | Cause | Fix |
+|---|---|---|
+| `chosen: null` and a `best_failed` | No allowed strategy passed the rules | Read `violations` of `best_failed`, see [Rules](rules.md), change a condition. [Recipe](planning.md#recipe-fix-a-plan-that-fails-the-rules) |
+| `unsupported` with an empty `tried` | The scan can't be planned (gap, fewer than 6 teeth, extreme rotation) | See [Scans](scans.md#what-gets-rejected) |
+| 400 `소구치(4, 5, 12, 13) 발치만 계획할 수 있습니다: [n]` | Extraction of a non-premolar | Only FDI 14, 15, 24, 25 (Universal 5, 4, 12, 13) |
+| 400 `발치할 치아를 고정할 수 없습니다: [5]` | The same tooth in `lock` and `extraction` | Remove it from one |
+| 400 `IPR 처방 11-21 0.6mm: 접촉면당 최대 0.5mm(치아 면당 0.25mm)를 넘습니다` | More than 0.5 mm at one contact | Lower it |
+| 400 `IPR 접촉면은 이웃한 두 치아여야 합니다: 11-22` | The two teeth aren't neighbours | Use adjacent teeth. `ipr_surfaces` is FDI |
+| 400 `IPR 접촉면이 두 번 처방되었습니다: 11-21` | The same contact twice | Keep one |
+| 400 `IPR 제외 치아에 IPR 이 처방되었습니다: <teeth>` | A prescribed contact touches an `ipr_exclude` tooth | Remove the tooth from `ipr_exclude` or the contact |
+| 400 `clear_stage_cap and stage_cap cannot be set together` | Both sent | Send one |
+| 400 `constraint refers to a tooth absent from this case` | A tooth number not in the scan, often FDI sent where Universal is expected | `extraction`, `lock`, `ipr_exclude` take Universal 2–15 |
+| 400 `입력 확인 전 스캔입니다. 입력 확인 화면에서 치아 번호와 방향을 확인한 뒤 계획하세요.` | The patient scan isn't confirmed | `POST /api/patients/{pid}/scans/{sid}/confirm` |
+| A `lock` or other condition you didn't send is in the result | Without `parent_plan_id`, patches stack on the case's constraints | Send `[]` to clear it, or plan from a specific `parent_plan_id` |
+
+## Approval and export
+
+| You see | Cause | Fix |
+|---|---|---|
+| 400 `의사의 명시적 확인이 필요합니다.` | Body lacks `"confirmed": true` | Send it |
+| 409 `규칙 위반 계획은 승인할 수 없습니다.` | The plan has violations | Fix and replan |
+| 409 `검토가 완료되지 않았습니다. 검토 실패/미실행 계획은 승인할 수 없습니다.` | Review is `failed`, `not_requested` or `running` | Request a review again, or wait |
+| 409 `스캔 번호가 바뀐 뒤의 이전 계획입니다. 새 입력으로 다시 계획하세요.` | The scan was mirrored after this plan | Plan again on the current revision |
+| 409 `삭제된 스캔입니다.` | The scan was deleted | Upload again |
+| 409 `의사가 현재 계획을 승인한 뒤 내보낼 수 있습니다.` on `stl.zip` | Not approved, or changed since approval | Approve the current plan |
+| 500 `내보내기 파일을 만들지 못했습니다: ...` | The zip build failed | Check the server log. The header `X-Cualign-Print-Models` carries the print-model status |
+| Zip has no `print_models/*.stl` | No `gingiva.stl` in the case | `print_models/README.txt` says why. Upload a gum scan |
+
+## Scans and patients
+
+See the full table in [Scans](scans.md#what-gets-rejected). Also:
+
+| You see | Cause | Fix |
+|---|---|---|
+| 409 `화면의 스캔이 최신이 아닙니다(번호가 바뀌었습니다). 입력 확인 화면을 다시 열어 확인하세요.` | `confirm` sent an old `revision` | Read the check again and send its `revision` |
+| 409 `지원하지 않는 스캔은 계획용으로 확인할 수 없습니다.` | `unsupported` isn't empty | Fix the files. Nothing to confirm |
+| 404 `'unknown patient P9999'` | Wrong patient id | `GET /api/patients` |
+| 422 `Field required` at `["body", "files"]` | The multipart field isn't named `files`, or the shell didn't expand the list | Use `-F "files=@11.stl"` per file. In zsh, build an array (see [Scans](scans.md#recipe-upload-my-per-tooth-stl-files)) |
+
+## MCP
+
+| You see | Cause | Fix |
+|---|---|---|
+| 503 `MCP is disabled: no token is configured` | Neither `CUALIGN_MCP_TOKEN` nor `CUALIGN_MCP_TOKEN_SHA256` is set | Set one and restart |
+| 401 `invalid or missing bearer token` | Missing or wrong `Authorization: Bearer` | Check the token. The server compares SHA-256 digests |
+| 421 `Invalid Host header` | The `Host` isn't localhost and isn't in `CUALIGN_MCP_ALLOWED_HOSTS` | Add it, with and without the port |
+| `MCP error -32001: Request timed out` in the client | `cualign_plan` takes 63–156 s | Raise the client timeout to 120 s or more |
+| `{"status": "error", "message": "unknown case nope"}` | Case id not found | `cualign_list_cases`, or the patient case id from the dentist |
+
+## CLI
+
+| You see | Fix |
+|---|---|
+| `[확인 필요] 발치할 치아 번호를 함께 적어 주세요(FDI, 예: "14번과 24번 발치"). ...` | Name the teeth in FDI |
+| `[확인 필요] 발치 치아는 상악 FDI 번호(11~18, 21~28)로 적어 주세요(...)` | You wrote Universal numbers. Use FDI |
+| `[확인 필요] 발치할 치아와 금지·변경 표현이 함께 있어 ...` | Write only the prescription |
+| `[거부] CLI 초안은 미승인입니다. ...` | `--export` is always refused. Approve in the server and download there |
+| `AuthlibDeprecationWarning: authlib.jose module is deprecated` at start | Harmless warning from a NAT dependency |
+
+<!-- source: https://cualign.external.kr/docs/limits.md -->
+
+---
+title: Limits
+description: What cuAlign doesn't do (lower arch, torque, most rotations, auth, clinical validation), what's unverified, and the terms of use.
+order: 11
+updated: 2026-09-28
+---
+
+# Limits
+
+Read this before trusting a plan or exposing the server.
+
+## Clinical scope
+
+- Upper arch only. Lower-arch files are refused at upload.
+- Teeth are translated. Rotation is corrected only for the four incisors (FDI 12, 11, 21, 22), and a crown more than 1 mm above or below its neighbours is levelled. Canine, premolar and molar rotation, torque, angulation, occlusion and tissue response aren't modelled.
+- Extraction works for premolars only, and only the teeth the dentist names.
+- The arch must be continuous with at least 6 teeth. A gap inside the arch makes the scan unsupported. Third molars are never planned.
+- Whole-arch scans aren't segmented. Upload one STL per tooth.
+- Months are `stages × 7 / 30.4`, a fixed 7-day wear period. They don't predict treatment time.
+- Collision checks cover neighbouring crowns' convex hulls. They don't guarantee zero contact between every pair.
+- IPR is applied to the tooth meshes in the exported files, as a computed cut. It isn't a clinical stripping protocol.
+- A rule pass isn't a clinical judgement. The outputs are review files, not aligners or validated production models.
+
+## Software
+
+- No user authentication and no per-user isolation. `/mcp` has a bearer token. Everything else is open to whoever can reach the port. Run on localhost or a trusted network.
+- Case constraints and the step flow live in memory and reset on restart. Plans, patients and scans persist in `CUALIGN_OUT`.
+- The web UI is Korean only and loads three.js from a CDN.
+- Guardrails check chat input and output on every agent route. They don't filter the progress events or the raw steps of `/v1/workflow/full` and `/v1/workflow/atif`. On a rail error the turn proceeds with an ERROR log unless `CUALIGN_RAILS_FAIL_CLOSED=1`. The personal-data filter catches resident numbers, phone numbers and e-mail addresses, not names or chart numbers.
+- A plan request makes several model calls. If one of them fails after its retries, the whole request fails.
+
+## Not verified for these docs
+
+- A successful agent turn over `/chat/stream` or MCP `cualign_plan`. No key was available, so only the failure path was run.
+- The web UI flow. Button names come from the UI source.
+- Docker, OpenShell and NemoClaw setups. See `docs/openshell.md` and `docs/nemoclaw.md` in the repository for the project's own records.
+
+## Data and terms
+
+The three sample cases are upper-arch scans from Poseidon3D (Kubik & Spanel 2024, CC-BY-4.0), with prescriptions a dentist wrote for them. Tooth templates used by the synthetic presets carry their own CC-BY 4.0 attribution in the repository.
+
+Terms of use: [End User License Agreement](../eula.html). Source code: <https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype>.
