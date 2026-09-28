@@ -10,8 +10,6 @@ const HOLD_MS = 1600;   // rest on the final stage
 const BACK_MS = 1100;   // ease back to stage 0
 const REST_MS = 700;    // rest before the next run
 
-// Universal 1..16 → FDI 18..11, 21..28 (the numbers a dentist reads).
-const fdi = (u) => (u <= 8 ? 19 - u : 12 + u);
 const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
 function geometry(part) {
@@ -22,7 +20,7 @@ function geometry(part) {
   return g;
 }
 
-export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
+export async function mountHero({ stage, canvas, dataUrl, touch }) {
   const res = await fetch(dataUrl);
   if (!res.ok) throw new Error(`hero data ${res.status}`);
   const data = await res.json();
@@ -94,16 +92,6 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
       if (bad.has(id)) m.material.color.copy(RED);
       else m.material.color.copy(IVORY).lerp(GREEN, Math.min(1, Math.hypot(...d) / maxMove) * 0.85);
     }
-    const list = badAt[shown] ?? [];
-    const collision = list.find((v) => v.type === 'collision');
-    const rules = collision
-      ? `collision ${collision.teeth.map(fdi).join('–')}`
-      : list.length ? `${list.length} rule ${list.length === 1 ? 'issue' : 'issues'}` : 'Rules: pass';
-    const text = `${shown === 0 ? 'Before treatment' : `Stage ${shown} / ${n}`} · ${rules}`;
-    if (hud.textContent !== text) {
-      hud.textContent = text;
-      hud.classList.toggle('is-warn', list.length > 0);
-    }
   }
 
   // Fit the arch into the canvas.
@@ -116,7 +104,7 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
     camera.aspect = aspect;
     const vfov = (camera.fov * Math.PI) / 180;
     const fit = radius / Math.sin(Math.min(vfov, 2 * Math.atan(Math.tan(vfov / 2) * aspect)) / 2);
-    camera.position.set(0, 0, fit * (aspect < 1.3 ? 0.8 : 1.0));   // the bounding sphere is loose; tighten on narrow screens
+    camera.position.set(0, 0, fit * (aspect < 1.3 ? 0.7 : 0.9));   // the bounding sphere is loose; tighten on narrow screens
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }
@@ -125,7 +113,7 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
 
   // Timeline, auto-rotation, drag and scroll tilt.
   const BASE_PITCH = 0.62;
-  let clock = 0, prev = performance.now(), hovering = false, dragging = null;
+  let clock = 0, prev = performance.now(), dragging = null;
   let dragYaw = 0, dragPitch = 0, spin = 0, visible = true, raf = 0;
 
   function stageAt(ms) {
@@ -140,12 +128,12 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
   function frame(now) {
     raf = 0;
     const dt = Math.min(64, now - prev); prev = now;
-    if (!hovering && !dragging) { clock += dt; spin += dt * 0.00018; }
+    if (!dragging) { clock += dt; spin += dt * 0.00018; }
     const rect = stage.getBoundingClientRect();
     const scrolled = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height)));
     yaw.rotation.y = Math.sin(spin) * 0.55 + dragYaw;
     pitch.rotation.x = BASE_PITCH + dragPitch + scrolled * 0.45;
-    yaw.position.y = -scrolled * radius * 0.35;
+    yaw.position.y = -scrolled * radius * 0.25;
     pose(stageAt(clock));
     renderer.render(scene, camera);
     if (visible) raf = requestAnimationFrame(frame);
@@ -162,8 +150,6 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch }) {
   });
 
   if (!touch) {
-    canvas.addEventListener('pointerenter', () => { hovering = true; });
-    canvas.addEventListener('pointerleave', () => { hovering = false; });
     canvas.addEventListener('pointerdown', (e) => {
       dragging = { x: e.clientX, y: e.clientY, yaw: dragYaw, pitch: dragPitch };
       canvas.setPointerCapture(e.pointerId);

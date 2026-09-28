@@ -3,9 +3,16 @@
 
   const EULA_VERSION = '2026-09-28';
   const CONSENT_KEY = 'cualign.eula';
-  const LAUNCH_URL = 'https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype#readme';
+  const LAUNCH_URL = 'https://cualign-proto.external.kr/';   // hosted prototype, behind Basic auth
+  const DEMO_FORM_URL = '/request/';   // demo request form; the buttons are hidden while this is empty
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  // Demo request buttons: shown only once the form URL is set.
+  document.querySelectorAll('[data-demo-request]').forEach((a) => {
+    if (DEMO_FORM_URL) a.href = DEMO_FORM_URL;
+    else a.hidden = true;
+  });
 
   // Nav: border once scrolled, mobile menu toggle.
   const nav = document.querySelector('[data-nav]');
@@ -54,7 +61,6 @@
       .then(({ mountHero }) => mountHero({
         stage: heroStage,
         canvas: heroStage.querySelector('[data-hero-canvas]'),
-        hud: heroStage.querySelector('[data-hero-hud-text]'),
         dataUrl: 'assets/hero-case.json',
         touch: !finePointer,
       }))
@@ -64,91 +70,149 @@
   if (document.readyState === 'complete') bootHero();
   else window.addEventListener('load', bootHero, { once: true });
 
-  // Tabs (roving tabindex, arrow keys).
-  document.querySelectorAll('[data-tabs]').forEach((root) => {
-    const tabs = [...root.querySelectorAll('[role="tab"]')];
-    const select = (tab, focus) => {
-      tabs.forEach((t) => {
-        const on = t === tab;
-        t.setAttribute('aria-selected', String(on));
-        t.tabIndex = on ? 0 : -1;
-        const panel = root.querySelector(`#${t.getAttribute('aria-controls')}`);
-        if (panel) panel.hidden = !on;
-      });
-      if (focus) tab.focus();
-    };
-    tabs.forEach((tab, i) => {
-      tab.addEventListener('click', () => select(tab, false));
-      tab.addEventListener('keydown', (e) => {
-        const keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
-        if (e.key in keys) {
-          e.preventDefault();
-          select(tabs[(i + keys[e.key] + tabs.length) % tabs.length], true);
-        } else if (e.key === 'Home') { e.preventDefault(); select(tabs[0], true); }
-        else if (e.key === 'End') { e.preventDefault(); select(tabs[tabs.length - 1], true); }
-      });
-    });
-  });
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // Workflow: highlight the step whose card is in view and fill the rail up to it.
-  const flow = document.querySelector('[data-flow]');
-  if (flow) {
-    const steps = [...flow.querySelectorAll('[data-flow-step]')];
-    const cards = [...flow.querySelectorAll('[data-flow-card]')];
-    const progress = flow.querySelector('[data-flow-progress]');
-    const setActive = (index) => {
-      steps.forEach((s, i) => {
-        s.classList.toggle('is-active', i === index);
-        s.classList.toggle('is-done', i < index);
-      });
-      cards.forEach((c, i) => c.classList.toggle('is-active', i === index));
-      if (progress && steps[index]) {
-        const rail = progress.parentElement.getBoundingClientRect();
-        const dot = steps[index].getBoundingClientRect();
-        progress.style.height = `${Math.max(0, dot.top - rail.top)}px`;
-        progress.parentElement.style.setProperty('--flow-w', `${(index / (steps.length - 1)) * 100}%`);
+  // Hero prompt: type the prescription once, like a prompt field being filled.
+  const heroType = document.querySelector('[data-hero-type]');
+  if (heroType && !reduceMotion) {
+    const full = heroType.textContent;
+    heroType.textContent = '';
+    (async () => {
+      await wait(700);
+      for (let i = 1; i <= full.length; i++) {
+        heroType.textContent = full.slice(0, i);
+        await wait(38 + Math.random() * 40);
       }
-    };
-    const pick = () => {
-      const mid = window.innerHeight * 0.45;
-      let best = 0;
-      cards.forEach((c, i) => { if (c.getBoundingClientRect().top < mid) best = i; });
-      setActive(best);
-    };
-    window.addEventListener('scroll', pick, { passive: true });
-    window.addEventListener('resize', pick);
-    pick();
-    steps.forEach((s, i) => {
-      s.tabIndex = 0;
-      s.setAttribute('role', 'link');
-      const go = () => cards[i].scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
-      s.addEventListener('click', go);
-      s.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
-    });
+    })();
   }
 
-  // Stage scrubber: four real stages from the sample case.
-  const STAGES = [
-    { stage: 0, text: 'Before treatment. Fourteen upper teeth, 4.2 mm of crowding.' },
-    { stage: 6, text: 'Stage 6. The rule checker flags a collision between teeth 13 and 12, and marks the stage on the stage bar.', warn: true },
-    { stage: 12, text: 'Stage 12. The last stage where the 13–12 collision is flagged. The agent reports it instead of hiding it.', warn: true },
-    { stage: 18, text: 'Final stage. This expansion plan still has 7 rule violations, so the approval button stays locked.', warn: true },
-  ];
+  // Agent demo: messages appear in order, user lines are typed, tool rows tick one by one,
+  // and the capture beside the chat follows the step. Plays once when scrolled into view; Replay restarts it.
+  const demo = document.querySelector('[data-demo]');
+  if (demo) {
+    const msgs = [...demo.querySelectorAll('[data-demo-chat] > .msg')];
+    const figures = [...demo.querySelectorAll('[data-demo-media] figure')];
+    const replay = demo.querySelector('[data-demo-replay]');
+    const texts = msgs.map((m) => { const t = m.querySelector('[data-type]'); return t ? t.textContent : null; });
+    let run = 0;
+
+    const rail = [...document.querySelectorAll('[data-demo-steps] [data-step-for]')];
+    const STEP_OF_MSG = [0, 1, 1, 2, 3];   // message index → step on the rail (draft and check share a step)
+    const MEDIA_OF_MSG = [0, 1, 2, 2, 3];  // message index → figure (the revision request keeps the collision in view)
+    const showMedia = (fig, msg = figures.length) => {
+      figures.forEach((f) => f.classList.toggle('is-active', Number(f.dataset.media) === fig));
+      const at = STEP_OF_MSG[msg] ?? rail.length - 1;
+      rail.forEach((r) => {
+        const k = Number(r.dataset.stepFor);
+        r.classList.toggle('is-active', k === at);
+        r.classList.toggle('is-done', k < at);
+      });
+    };
+    const reset = () => {
+      msgs.forEach((m, i) => {
+        m.classList.remove('is-shown', 'is-typing');
+        m.querySelectorAll('.tools li').forEach((li) => li.classList.remove('is-done'));
+        const t = m.querySelector('[data-type]');
+        if (t) t.textContent = texts[i];
+      });
+      showMedia(0, 0);
+    };
+    const showAll = () => {
+      msgs.forEach((m) => {
+        m.classList.add('is-shown');
+        m.querySelectorAll('.tools li').forEach((li) => li.classList.add('is-done'));
+      });
+      showMedia(figures.length - 1);
+    };
+
+    const play = async () => {
+      const id = ++run;
+      const alive = () => id === run;
+      reset();
+      demo.classList.add('is-playing');
+      for (let i = 0; i < msgs.length; i++) {
+        const m = msgs[i];
+        await wait(i === 0 ? 300 : 650);
+        if (!alive()) return;
+        m.classList.add('is-shown');
+        showMedia(MEDIA_OF_MSG[i] ?? 0, i);
+        const t = m.querySelector('[data-type]');
+        if (t) {
+          m.classList.add('is-typing');
+          t.textContent = '';
+          for (let c = 1; c <= texts[i].length; c++) {
+            t.textContent = texts[i].slice(0, c);
+            await wait(32);
+            if (!alive()) return;
+          }
+          m.classList.remove('is-typing');
+        }
+        for (const li of m.querySelectorAll('.tools li')) {
+          await wait(420);
+          if (!alive()) return;
+          li.classList.add('is-done');
+        }
+      }
+      demo.classList.remove('is-playing');
+    };
+
+    msgs.forEach((m, i) => m.addEventListener('click', () => { if (m.classList.contains('is-shown')) showMedia(MEDIA_OF_MSG[i] ?? 0, i); }));
+
+    if (reduceMotion || !('IntersectionObserver' in window)) {
+      showAll();
+      if (replay) replay.addEventListener('click', showAll);
+    } else {
+      reset();
+      const io = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) { io.disconnect(); play(); }
+      }, { threshold: 0.35 });
+      io.observe(demo);
+      if (replay) replay.addEventListener('click', () => { play(); });
+    }
+  }
+
+
+  // Stage scrubber: every stage of a real sample plan. Plays on its own while the section is on screen;
+  // moving the slider or pressing the button stops it. Reduced motion: no autoplay.
   const range = document.querySelector('[data-stage-range]');
-  const out = document.querySelector('[data-stage-out]');
-  const caption = document.querySelector('[data-stage-caption]');
   const imgs = [...document.querySelectorAll('[data-stage-media] img')];
-  if (range && out && caption) {
+  const playBtn = document.querySelector('[data-stage-play]');
+  if (range) {
+    const last = Number(range.max);
+    const label = (i) => (i === 0 ? 'Before treatment' : i === last ? 'Final stage'
+      : `Stage ${i} of ${last}${i >= 6 && i <= 12 ? ', collision flagged' : ''}`);
     const show = (i) => {
-      const s = STAGES[i];
-      out.textContent = String(s.stage);
-      caption.textContent = s.text;
-      caption.classList.toggle('is-warn', Boolean(s.warn));
-      range.setAttribute('aria-valuetext', `Stage ${s.stage} of 18`);
+      range.value = String(i);
+      range.setAttribute('aria-valuetext', label(i));
       imgs.forEach((img) => img.classList.toggle('is-active', Number(img.dataset.stage) === i));
     };
-    range.addEventListener('input', () => show(Number(range.value)));
-    show(Number(range.value));
+    const STEP_MS = 900, END_PAUSE_MS = 1500;
+    let wanted = !reduceMotion, onScreen = false, timer = 0;
+    const running = () => wanted && onScreen && !document.hidden;
+    const tick = () => {
+      timer = 0;
+      if (!running()) return;
+      const i = Number(range.value);
+      show(i >= last ? 0 : i + 1);
+      timer = setTimeout(tick, Number(range.value) >= last ? END_PAUSE_MS : STEP_MS);
+    };
+    const sync = () => {
+      if (playBtn) {
+        playBtn.classList.toggle('is-paused', !wanted);
+        playBtn.setAttribute('aria-label', wanted ? 'Pause stage playback' : 'Play stage playback');
+      }
+      if (running() && !timer) timer = setTimeout(tick, STEP_MS);
+      if (!running() && timer) { clearTimeout(timer); timer = 0; }
+    };
+    range.addEventListener('input', () => { wanted = false; show(Number(range.value)); sync(); });
+    if (playBtn) playBtn.addEventListener('click', () => { wanted = !wanted; sync(); });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; sync(); }, { threshold: 0.3 })
+        .observe(range.closest('section') || range);
+    }
+    document.addEventListener('visibilitychange', sync);
+    show(0);
+    sync();
   }
 
   // Consent gate before launching.

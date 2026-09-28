@@ -47,6 +47,15 @@ jobs:
               exit 1
             fi
             cp -R "$dir" "dist/$site"
+            # forms.json lists the forms /_forms/<form> accepts. It moves out of the site folder so browsers cannot read it.
+            if [ -f "dist/$site/forms.json" ]; then
+              if ! jq -e 'type == "object" and (keys | all(test("^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$")))' "dist/$site/forms.json" >/dev/null; then
+                echo "::error::apps/$site/forms.json: 폼 이름을 키로 쓰는 JSON 객체여야 하고, 폼 이름은 소문자·숫자·하이픈이어야 합니다."
+                exit 1
+              fi
+              mkdir -p dist/_forms
+              mv "dist/$site/forms.json" "dist/_forms/$site.json"
+            fi
             routes=$(echo "$routes" | jq -c --arg p "$site.$ROOT_DOMAIN/*" --arg z "$ROOT_DOMAIN" '. + [{pattern: $p, zone_name: $z}]')
             echo "사이트: https://$site.$ROOT_DOMAIN"
           done
@@ -55,6 +64,7 @@ jobs:
             main: "router/worker.js",
             compatibility_date: "2025-09-01",
             assets: { directory: "dist", binding: "ASSETS", run_worker_first: true },
+            r2_buckets: [{ binding: "FORMS", bucket_name: "landing-forms" }],
             routes: $routes
           }' > wrangler.json
           cat wrangler.json

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Request a demo · cuAlign</title>
+  <meta name="description" content="Try changing an aligner plan in a sentence. Ask for login details to the hosted cuAlign prototype. We review each request and reply by email.">
+  <link rel="canonical" href="https://cualign.external.kr/request/">
+  <meta name="theme-color" content="#07090a">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="cuAlign">
+  <meta property="og:url" content="https://cualign.external.kr/request/">
+  <meta property="og:title" content="Request a cuAlign demo">
+  <meta property="og:description" content="Try changing an aligner plan in a sentence on the hosted cuAlign prototype. We review each request and reply by email.">
+  <meta property="og:image" content="https://cualign.external.kr/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* The page must not depend on the landing stylesheet for this: its classes set display, which beats [hidden]. */
+    [hidden] { display: none !important; }
+    /* Script moves focus to the error summary and the done block; only keyboard targets show a ring. */
+    [tabindex="-1"]:focus { outline: none; }
+    .rq-nav { border-bottom: 1px solid var(--line); }
+    .rq-nav .container { height: var(--nav-h); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .rq-nav .brand img { width: 120px; height: auto; }
+    .rq-back { color: var(--text-2); font-size: 14px; font-weight: 500; text-decoration: none; }
+    .rq-back:hover { color: var(--text); }
+    .rq { padding-block: clamp(40px, 7vw, 88px) 72px; }
+    .rq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: clamp(32px, 6vw, 72px); align-items: start; }
+    .rq-intro { display: grid; gap: 18px; }
+    .rq-intro h1 { font-size: clamp(32px, 4.4vw, 48px); }
+    .rq-intro .lead { color: var(--text-2); font-size: 17px; }
+    .rq-note { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); padding: 16px 18px; color: var(--text-2); font-size: 14px; display: grid; gap: 6px; }
+    .rq-note strong { color: var(--text); font-weight: 600; }
+    .rq-card { border: 1px solid var(--line); background: var(--bg-alt); border-radius: var(--radius); padding: clamp(20px, 3.5vw, 32px); }
+    .rq-form { display: grid; gap: 20px; }
+    .rq-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .rq-field { display: grid; gap: 8px; min-width: 0; align-content: start; }
+    .rq-field label, .rq-legend { font-size: 14px; font-weight: 600; color: var(--text); }
+    .rq-opt { color: var(--muted); font-weight: 400; }
+    .rq-req { color: var(--accent); }
+    .rq-field input, .rq-field select, .rq-field textarea {
+      width: 100%; min-width: 0; font: 15px/1.4 var(--font); color: var(--text);
+      background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+      padding: 12px 14px; transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .rq-field textarea { min-height: 120px; resize: vertical; }
+    .rq-field select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 40px; }
+    .rq-field input:focus, .rq-field select:focus, .rq-field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .rq-field [aria-invalid="true"] { border-color: #f0706a; }
+    .rq-hint { color: var(--muted); font-size: 13px; }
+    .rq-error { color: #ff9a94; font-size: 13px; font-weight: 500; }
+    .rq-error:empty { display: none; }
+    .rq-checks { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; }
+    .rq-check { display: grid; grid-template-columns: 20px 1fr; gap: 12px; align-items: start; font-size: 14px; color: var(--text-2); }
+    .rq-check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); }
+    .rq-check label { cursor: pointer; }
+    .rq-check .rq-error { grid-column: 2; }
+    .rq-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+    .rq-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+    .rq-status { font-size: 14px; }
+    .rq-status.is-error { color: #ff9a94; }
+    .rq-summary { border: 1px solid rgba(240, 112, 106, 0.5); background: rgba(240, 112, 106, 0.08); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14px; }
+    .rq-summary ul { margin: 6px 0 0; padding-left: 18px; }
+    .rq-summary a { color: #ff9a94; }
+    .rq-done { display: grid; gap: 14px; }
+    .rq-done h2 { font-size: 26px; }
+    .rq-done p { color: var(--text-2); }
+    .rq-privacy { margin-top: 28px; display: grid; gap: 10px; color: var(--text-2); font-size: 14px; }
+    .rq-privacy h2 { font-size: 16px; color: var(--text); letter-spacing: 0; }
+    .rq-privacy dl { margin: 0; display: grid; gap: 10px; }
+    .rq-privacy dt { color: var(--text); font-weight: 600; }
+    .rq-privacy dd { margin: 2px 0 0; }
+    .rq-foot { border-top: 1px solid var(--line); padding-block: 24px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 880px) {
+      .rq-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .rq-row { grid-template-columns: 1fr; }
+      .rq-actions .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="rq-nav">
+    <div class="container">
+      <a class="brand" href="/" aria-label="cuAlign home"><img src="/assets/logo.png" alt="cuAlign" width="133" height="34"></a>
+      <a class="rq-back" href="/">Back to cuAlign</a>
+    </div>
+  </header>
+
+  <main id="main" class="rq">
+    <div class="container rq-grid">
+      <div class="rq-intro">
+        <h1>Request a demo</h1>
+        <p class="lead">The hosted prototype needs login details. We send them by email after we review your request.</p>
+        <div class="rq-note">
+          <strong>Not for clinical use.</strong>
+          <span>cuAlign drafts clear aligner staging plans for research. A dentist reviews every stage. The drafts are not treatment advice.</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="rq-card">
+          <form class="rq-form" action="/_forms/demo-request" method="post" data-request-form>
+            <div class="rq-summary" role="alert" tabindex="-1" hidden data-summary>
+              <strong>Please fix the following:</strong>
+              <ul data-summary-list></ul>
+            </div>
+
+            <div class="rq-row">
+              <div class="rq-field">
+                <label for="f-name">Full name <span class="rq-req" aria-hidden="true">*</span></label>
+                <input id="f-name" name="name" type="text" autocomplete="name" required maxlength="200" aria-describedby="e-name">
+                <p class="rq-error" id="e-name" data-error-for="name"></p>
+              </div>
+              <div class="rq-field">
+                <label for="f-email">Email <span class="rq-req" aria-hidden="true">*</span></label>
+                <input id="f-email" name="email" type="email" autocomplete="email" required maxlength="254" aria-describedby="h-email e-email">
+                <p class="rq-hint" id="h-email">We send the login details here.</p>
+                <p class="rq-error" id="e-email" data-error-for="email"></p>
+              </div>
+            </div>
+
+            <div class="rq-field">
+              <label for="f-organization">Organization <span class="rq-req" aria-hidden="true">*</span></label>
+              <input id="f-organization" name="organization" type="text" autocomplete="organization" required maxlength="300" aria-describedby="h-organization e-organization">
+              <p class="rq-hint" id="h-organization">Clinic, lab or institution.</p>
+              <p class="rq-error" id="e-organization" data-error-for="organization"></p>
+            </div>
+
+            <div class="rq-row">
+              <div class="rq-field">
+                <label for="f-role">Role <span class="rq-req" aria-hidden="true">*</span></label>
+                <select id="f-role" name="role" required aria-describedby="e-role">
+                  <option value="">Choose your role</option>
+                  <option>Orthodontist</option>
+                  <option>General dentist</option>
+                  <option>Dental technician</option>
+                  <option>Researcher</option>
+                  <option>Other</option>
+                </select>
+                <p class="rq-error" id="e-role" data-error-for="role"></p>
+              </div>
+              <div class="rq-field">
+                <label for="f-country">Country <span class="rq-opt">(optional)</span></label>
+                <input id="f-country" name="country" type="text" autocomplete="country-name" maxlength="100" aria-describedby="e-country">
+                <p class="rq-error" id="e-country" data-error-for="country"></p>
+              </div>
+            </div>
+
+            <div class="rq-field">
+              <label for="f-message">What would you like to try? <span class="rq-opt">(optional)</span></label>
+              <textarea id="f-message" name="message" maxlength="2000" aria-describedby="h-message e-message"></textarea>
+              <p class="rq-hint" id="h-message">For example, a type of case or a staging rule you want to check. Up to 2,000 characters.</p>
+              <p class="rq-error" id="e-message" data-error-for="message"></p>
+            </div>
+
+            <fieldset class="rq-checks">
+              <legend class="sr-only">Confirmations</legend>
+              <div class="rq-check">
+                <input id="f-ack-research" name="ack_research" type="checkbox" value="yes" required aria-describedby="e-ack_research">
+                <label for="f-ack-research">I understand cuAlign is a research prototype and not for clinical use. <span class="rq-req" aria-hidden="true">*</span></label>
+                <p class="rq-error" id="e-ack_research" data-error-for="ack_research"></p>
+              </div>
+              <div class="rq-check">
+                <input id="f-ack-contact" name="ack_contact" type="checkbox" value="yes" required aria-describedby="e-ack_contact">
+                <label for="f-ack-contact">The cuAlign team may contact me about this request. <span class="rq-req" aria-hidden="true">*</span></label>
+                <p class="rq-error" id="e-ack_contact" data-error-for="ack_contact"></p>
+              </div>
+            </fieldset>
+
+            <div class="rq-hp" aria-hidden="true">
+              <label for="f-website">Leave this field empty</label>
+              <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+            </div>
+
+            <div class="rq-actions">
+              <button class="btn btn-primary" type="submit" data-submit>Send request</button>
+              <p class="rq-status" role="status" aria-live="polite" data-status></p>
+            </div>
+            <p class="rq-hint"><span class="rq-req" aria-hidden="true">*</span> Required</p>
+          </form>
+
+          <div class="rq-done" tabindex="-1" hidden data-done>
+            <h2>Request received</h2>
+            <p>Thank you. We review each request by hand and email the login details to the address you gave.</p>
+            <p><a class="btn btn-ghost" href="/">Back to cuAlign</a></p>
+          </div>
+        </div>
+
+        <section class="rq-privacy" aria-labelledby="privacy-title">
+          <h2 id="privacy-title">How we handle your request</h2>
+          <dl>
+            <div>
+              <dt>What we store</dt>
+              <dd>The answers you give in this form, the time we receive it, and the country the request came from as reported by our hosting provider, Cloudflare. We do not store your IP address.</dd>
+            </div>
+            <div>
+              <dt>Why</dt>
+              <dd>To review your request, email you login details for the hosted prototype, and contact you about this request.</dd>
+            </div>
+            <div>
+              <dt>Deleting it</dt>
+              <dd>To have your request deleted, send this form again from the same email address and write “Delete my request” in the last box. We delete the stored request and reply by email.</dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="rq-foot">
+    <div class="container">Research prototype. Not for clinical use. © 2026 cuAlign team.</div>
+  </footer>
+
+  <script>
+    (() => {
+      const form = document.querySelector('[data-request-form]');
+      const summary = form.querySelector('[data-summary]');
+      const summaryList = form.querySelector('[data-summary-list]');
+      const status = form.querySelector('[data-status]');
+      const submit = form.querySelector('[data-submit]');
+      const done = document.querySelector('[data-done]');
+      const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+      const LABELS = {
+        name: 'Full name', email: 'Email', organization: 'Organization', role: 'Role', country: 'Country',
+        message: 'What would you like to try?', ack_research: 'Research prototype confirmation', ack_contact: 'Contact confirmation',
+      };
+      const MESSAGES = {
+        required: (name) => (name.startsWith('ack_') ? 'Check this box to send the request.' : 'Fill in this field.'),
+        invalid_email: () => 'Enter an email address like name@example.com.',
+        too_long: () => 'This answer is too long.',
+        invalid_option: () => 'Choose one of the options.',
+      };
+      form.noValidate = true;
+
+      function clearErrors() {
+        form.querySelectorAll('[data-error-for]').forEach((p) => { p.textContent = ''; });
+        form.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+        summary.hidden = true;
+        summaryList.textContent = '';
+      }
+
+      function showErrors(errors) {
+        const names = Object.keys(errors);
+        for (const name of names) {
+          const field = form.elements[name];
+          const text = (MESSAGES[errors[name]] || MESSAGES.required)(name);
+          form.querySelector(`[data-error-for="${name}"]`).textContent = text;
+          field.setAttribute('aria-invalid', 'true');
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = `#${field.id}`;
+          a.textContent = `${LABELS[name]}: ${text}`;
+          a.addEventListener('click', (event) => { event.preventDefault(); field.focus(); });
+          li.append(a);
+          summaryList.append(li);
+        }
+        summary.hidden = false;
+        summary.focus();
+      }
+
+      function check() {
+        const errors = {};
+        for (const el of form.elements) {
+          if (!el.name || el.name === 'website' || !LABELS[el.name]) continue;
+          const value = el.type === 'checkbox' ? (el.checked ? 'yes' : '') : el.value.trim();
+          if (el.required && !value) errors[el.name] = 'required';
+          else if (el.type === 'email' && value && !EMAIL.test(value)) errors[el.name] = 'invalid_email';
+          else if (el.maxLength > 0 && value.length > el.maxLength) errors[el.name] = 'too_long';
+        }
+        return errors;
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        clearErrors();
+        status.textContent = '';
+        status.classList.remove('is-error');
+        const errors = check();
+        if (Object.keys(errors).length) { showErrors(errors); return; }
+
+        const data = {};
+        for (const el of form.elements) {
+          if (!el.name) continue;
+          if (el.type === 'checkbox') { if (el.checked) data[el.name] = el.value; } else data[el.name] = el.value;
+        }
+        submit.disabled = true;
+        status.textContent = 'Sending…';
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', accept: 'application/json' },
+            body: JSON.stringify(data),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (response.ok && result.ok) {
+            form.hidden = true;
+            done.hidden = false;
+            done.focus();
+            return;
+          }
+          status.textContent = '';
+          if (result.error === 'invalid_fields' && result.fields) { showErrors(result.fields); return; }
+          throw new Error(result.error || `HTTP ${response.status}`);
+        } catch {
+          status.classList.add('is-error');
+          status.textContent = 'We could not send your request. Check your connection and try again.';
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
