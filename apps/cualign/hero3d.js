@@ -1,14 +1,20 @@
-// Hero: the sample upper arch (poseidon-000131, expansion plan) replaying its treatment stages.
+// Hero: the sample upper arch (poseidon-000097) replaying an extraction plan cuAlign computed for it.
+// The two teeth to extract are tinted, lift out and fade, then the other teeth close the space stage by stage.
 // Loaded by app.js only when WebGL works and reduced motion is off; the poster image stays otherwise.
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js';
 
 const IVORY = new THREE.Color(0xe9e4da);
 const GREEN = new THREE.Color(0x76b900);
 const RED = new THREE.Color(0xe5484d);
-const PLAY_MS = 6500;   // stage 0 → last
-const HOLD_MS = 1600;   // rest on the final stage
-const BACK_MS = 1100;   // ease back to stage 0
-const REST_MS = 700;    // rest before the next run
+// Timeline of one loop, in order.
+const SHOW_MS = 1200;      // the arch as scanned
+const MARK_MS = 1100;      // the teeth to extract take on a soft green tint
+const LIFT_MS = 1100;      // they rise out of the arch, shrink a little and fade
+const PLAY_MS = 7000;      // the remaining teeth move through every stage
+const HOLD_MS = 1800;      // rest on the final stage
+const BACK_MS = 1000;      // everything eases back to the start
+const CYCLE_MS = SHOW_MS + MARK_MS + LIFT_MS + PLAY_MS + HOLD_MS + BACK_MS;
+const LIFT_MM = 9;         // how far an extracted tooth rises
 
 const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
@@ -44,9 +50,12 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
   scene.add(yaw); yaw.add(pitch); pitch.add(model);
   model.rotation.set(-Math.PI / 2, 0, Math.PI);
 
+  const removed = new Set((data.removed ?? []).map(String));
   const teeth = {};
   for (const [id, part] of Object.entries(data.teeth)) {
-    const mesh = new THREE.Mesh(geometry(part), new THREE.MeshStandardMaterial({ color: IVORY.clone(), roughness: 0.38, metalness: 0.02 }));
+    const mat = new THREE.MeshStandardMaterial({ color: IVORY.clone(), roughness: 0.38, metalness: 0.02 });
+    if (removed.has(id)) { mat.transparent = true; mat.emissive = GREEN.clone(); mat.emissiveIntensity = 0; }
+    const mesh = new THREE.Mesh(geometry(part), mat);
     model.add(mesh);
     teeth[id] = mesh;
   }
@@ -60,6 +69,19 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
   const center = box.getCenter(new THREE.Vector3());
   model.position.sub(center);
   const radius = box.getSize(new THREE.Vector3()).length() / 2;
+
+  // Extracted teeth leave along the crown direction: away from the gum, which reads as "up" on screen.
+  const meanZ = (v) => { let z = 0; for (let i = 2; i < v.length; i += 3) z += v[i]; return z / (v.length / 3); };
+  const gumZ = meanZ(data.gum.v);
+  const lift = {};
+  for (const id of removed) {
+    if (!data.teeth[id]) continue;
+    const g = teeth[id].geometry;
+    g.computeBoundingBox();
+    const c = g.boundingBox.getCenter(new THREE.Vector3());
+    g.translate(-c.x, -c.y, -c.z);        // scale about the tooth's own centre
+    lift[id] = { c, dir: Math.sign(meanZ(data.teeth[id].v) - gumZ) || 1 };
+  }
 
   const last = data.stages[n - 1];
   const maxMove = Math.max(1e-6, ...Object.values(last).map((d) => Math.hypot(...d)));
@@ -79,6 +101,7 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
     const shown = Math.round(s);
     const bad = new Set((badAt[shown] ?? []).filter((v) => v.type === 'collision').flatMap((v) => v.teeth.map(String)));
     for (const [id, m] of Object.entries(teeth)) {
+      if (removed.has(id)) continue;
       const a0 = offsetAt(k0, id), a1 = offsetAt(k1, id);
       const d = [0, 1, 2].map((i) => a0[i] + (a1[i] - a0[i]) * t);
       const deg = angleAt(k0, id) + (angleAt(k1, id) - angleAt(k0, id)) * t;
@@ -92,6 +115,40 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
       if (bad.has(id)) m.material.color.copy(RED);
       else m.material.color.copy(IVORY).lerp(GREEN, Math.min(1, Math.hypot(...d) / maxMove) * 0.85);
     }
+  }
+
+  // Extracted teeth: mark (0..1) tints them, out (0..1) lifts, shrinks and fades them.
+  const MARK = IVORY.clone().lerp(GREEN, 0.55);
+  function extract(mark, out) {
+    for (const id of removed) {
+      const m = teeth[id], l = lift[id];
+      if (!m || !l) continue;
+      m.visible = out < 1;
+      m.material.color.copy(IVORY).lerp(MARK, mark);
+      m.material.emissiveIntensity = 0.22 * mark * (1 - out);
+      m.material.opacity = 1 - out;
+      m.material.depthWrite = out === 0;
+      m.scale.setScalar(1 - 0.15 * out);
+      m.position.set(l.c.x, l.c.y, l.c.z + l.dir * LIFT_MM * out);
+    }
+  }
+
+  // Where the loop is at time ms: stage s, tint mark, extraction progress out.
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  function timeline(ms) {
+    let t = ms % CYCLE_MS;
+    if (t < SHOW_MS) return { s: 0, mark: 0, out: 0 };
+    t -= SHOW_MS;
+    if (t < MARK_MS) return { s: 0, mark: ease(t / MARK_MS), out: 0 };
+    t -= MARK_MS;
+    if (t < LIFT_MS) return { s: 0, mark: 1, out: easeOut(t / LIFT_MS) };
+    t -= LIFT_MS;
+    if (t < PLAY_MS) return { s: n * ease(t / PLAY_MS), mark: 1, out: 1 };
+    t -= PLAY_MS;
+    if (t < HOLD_MS) return { s: n, mark: 1, out: 1 };
+    t -= HOLD_MS;
+    const b = ease(t / BACK_MS);
+    return { s: n * (1 - b), mark: 1 - b, out: 1 - b };
   }
 
   // Fit the arch into the canvas.
@@ -116,15 +173,6 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
   let clock = 0, prev = performance.now(), dragging = null;
   let dragYaw = 0, dragPitch = 0, spin = 0, visible = true, raf = 0;
 
-  function stageAt(ms) {
-    const cycle = PLAY_MS + HOLD_MS + BACK_MS + REST_MS;
-    const t = ms % cycle;
-    if (t < PLAY_MS) return n * ease(t / PLAY_MS);
-    if (t < PLAY_MS + HOLD_MS) return n;
-    if (t < PLAY_MS + HOLD_MS + BACK_MS) return n * (1 - ease((t - PLAY_MS - HOLD_MS) / BACK_MS));
-    return 0;
-  }
-
   function frame(now) {
     raf = 0;
     const dt = Math.min(64, now - prev); prev = now;
@@ -134,7 +182,9 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
     yaw.rotation.y = Math.sin(spin) * 0.55 + dragYaw;
     pitch.rotation.x = BASE_PITCH + dragPitch + scrolled * 0.45;
     yaw.position.y = -scrolled * radius * 0.25;
-    pose(stageAt(clock));
+    const at = timeline(clock);
+    pose(at.s);
+    extract(at.mark, at.out);
     renderer.render(scene, camera);
     if (visible) raf = requestAnimationFrame(frame);
   }
@@ -167,6 +217,7 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
 
   // Draw once, then let the caller swap the poster out.
   pose(0);
+  extract(0, 0);
   renderer.render(scene, camera);
   start();
   return { stages: n };
