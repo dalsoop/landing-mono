@@ -4,7 +4,7 @@
   const EULA_VERSION = '2026-09-28';
   const CONSENT_KEY = 'cualign.eula';
   const LAUNCH_URL = 'https://cualign-proto.external.kr/';   // hosted prototype, behind Basic auth
-  const DEMO_FORM_URL = '';   // demo request form; the buttons are hidden while this is empty
+  const DEMO_FORM_URL = '/request/';   // demo request form; the buttons are hidden while this is empty
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
