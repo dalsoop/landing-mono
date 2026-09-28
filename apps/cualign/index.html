@@ -28,7 +28,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="styles.css">
   <script>document.documentElement.classList.add('js');</script>
 </head>
@@ -49,7 +48,7 @@
       <div class="nav-actions">
         <a class="btn btn-ghost btn-sm nav-gh" href="https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype" rel="noopener">GitHub</a>
         <a class="btn btn-ghost btn-sm nav-demo" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo</a>
-        <span class="access-note nav-access" id="access-nav">Access required · Korean UI</span>
+        <span class="access-note nav-access" id="access-nav">Access required</span>
         <button class="btn btn-primary btn-sm" type="button" data-launch aria-describedby="access-nav">Launch prototype</button>
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-nav-toggle>
           <span class="sr-only">Menu</span><span aria-hidden="true"></span>
@@ -78,18 +77,17 @@
           <h1 class="reveal">Aligner staging by conversation.<br><span class="dim">The dentist decides.</span></h1>
           <p class="lead reveal">Built for dentists who plan clear aligners. Describe the prescription and an agent drafts every stage, then checks it with geometry tools. Nothing gets exported until you approve it.</p>
 
-          <a class="prompt reveal" href="#how" lang="ko" aria-label="See how the agent handles the prescription 발치 없이, 송곳니는 고정 (No extraction, keep the canines fixed)">
+          <a class="prompt reveal" href="#how" aria-label="See how the agent handles the prescription “No extraction, keep the canines fixed.”">
             <span class="prompt-label" aria-hidden="true">Prescription</span>
-            <span class="prompt-text" aria-hidden="true"><span data-hero-type>발치 없이, 송곳니는 고정</span><span class="caret"></span></span>
+            <span class="prompt-text" aria-hidden="true"><span data-hero-type>No extraction, keep the canines fixed.</span><span class="caret"></span></span>
             <span class="prompt-send" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/></svg></span>
           </a>
-          <p class="prompt-tr reveal" aria-hidden="true">“No extraction, keep the canines fixed.” Prescriptions are written in Korean.</p>
 
           <div class="hero-actions reveal">
             <button class="btn btn-primary" type="button" data-launch aria-describedby="access-hero">Launch prototype <span aria-hidden="true">→</span></button>
             <a class="btn btn-ghost" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo</a>
           </div>
-          <p class="access-note hero-access reveal" id="access-hero"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>Access required. Login details are shared on request. <span class="ui-lang">Korean UI</span></p>
+          <p class="access-note hero-access reveal" id="access-hero"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>Access required. Login details are shared on request.</p>
         </div>
 
         <div class="hero-visual">
@@ -157,7 +155,7 @@
         </header>
 
         <ol class="steps" data-demo-steps>
-          <li class="step" data-step-for="0"><span class="step-num">01</span><h3>Describe</h3><p>You write the prescription in plain Korean.</p><span class="who-tag who-you">You decide</span></li>
+          <li class="step" data-step-for="0"><span class="step-num">01</span><h3>Describe</h3><p>You set the prescription in plain words.</p><span class="who-tag who-you">You decide</span></li>
           <li class="step" data-step-for="1"><span class="step-num">02</span><h3>Draft &amp; check</h3><p>The agent drafts every stage, and geometry tools flag movement, collision and space problems.</p><span class="who-tag">Agent proposes</span></li>
           <li class="step" data-step-for="2"><span class="step-num">03</span><h3>Revise</h3><p>You ask for changes. Conditions you already gave carry over.</p><span class="who-tag who-you">You decide</span></li>
           <li class="step" data-step-for="3"><span class="step-num">04</span><h3>Approve &amp; export</h3><p>You approve a plan that passes the rules. Print files come after that.</p><span class="who-tag who-you">You decide</span></li>
@@ -175,41 +173,36 @@
               </button>
             </div>
             <div class="demo-body">
-              <ol class="chat" data-demo-chat aria-label="Agent conversation, in Korean with English translations">
+              <ol class="chat" data-demo-chat aria-label="Agent conversation">
                 <li class="msg msg-user" data-step="0">
                   <span class="who">Dentist</span>
-                  <p lang="ko" data-type>발치 없이, 송곳니는 고정</p>
-                  <p class="tr">No extraction, keep the canines fixed.</p>
+                  <p data-type>No extraction, keep the canines fixed.</p>
                 </li>
                 <li class="msg msg-agent" data-step="1">
                   <span class="who">Agent</span>
-                  <p lang="ko">처방 조건으로 초안을 만듭니다.</p>
-                  <p class="tr">Drafting with your conditions.</p>
+                  <p>Drafting with your conditions.</p>
                   <ul class="tools">
-                    <li><span lang="ko">처방 반영</span> <span class="tr">Apply prescription</span><span class="tick" aria-hidden="true"></span></li>
-                    <li><span lang="ko">목표 배열 제안</span> <span class="tr">Target arrangement</span><span class="tick" aria-hidden="true"></span></li>
-                    <li><span lang="ko">단계 계획</span> <span class="tr">Movement stages</span><span class="tick" aria-hidden="true"></span></li>
+                    <li><code>set_constraints</code> No extraction · canines locked<span class="tick" aria-hidden="true"></span></li>
+                    <li><code>propose_target</code> Target arrangement<span class="tick" aria-hidden="true"></span></li>
+                    <li><code>plan_stages</code> Movement stages<span class="tick" aria-hidden="true"></span></li>
                   </ul>
                 </li>
                 <li class="msg msg-agent msg-warn" data-step="2">
-                  <span class="who">Agent · <span lang="ko">규칙 검사</span></span>
-                  <p lang="ko"><strong class="bad">13–12 충돌.</strong> 빨간색으로 표시했습니다. 송곳니는 고정한 채 IPR을 허용하면 공간을 만들 수 있습니다.</p>
-                  <p class="tr">Collision between 13 and 12, marked in red. Allowing IPR with the canines still fixed would make room.</p>
+                  <span class="who">Agent · <code>validate</code></span>
+                  <p><strong class="bad">Collision between 13 and 12.</strong> Marked in red. Suggested fix: allow IPR, canines still fixed.</p>
                 </li>
                 <li class="msg msg-user" data-step="3">
                   <span class="who">Dentist</span>
-                  <p lang="ko" data-type>IPR 허용. 나머지는 그대로</p>
-                  <p class="tr">Allow IPR. Keep everything else.</p>
+                  <p data-type>Allow IPR. Keep everything else.</p>
                 </li>
                 <li class="msg msg-agent msg-ok" data-step="4">
                   <span class="who">Agent</span>
-                  <p lang="ko">새 계획입니다. 유지 <span class="chip">비발치</span> <span class="chip">송곳니 고정</span> 추가 <span class="chip chip-new">IPR</span></p>
-                  <p class="tr">New plan. Kept: no extraction, canines fixed. Added: IPR.</p>
+                  <p>New plan. Kept <span class="chip">No extraction</span> <span class="chip">Canines locked</span> Added <span class="chip chip-new">IPR</span></p>
                   <ul class="tools">
-                    <li><span lang="ko">단계 계획</span> <span class="tr">Expansion + IPR</span><span class="tick" aria-hidden="true"></span></li>
-                    <li><span lang="ko">규칙 검사</span> <strong class="good">통과</strong> <span class="tr">Rules pass</span><span class="tick" aria-hidden="true"></span></li>
+                    <li><code>plan_stages</code> Expansion + IPR<span class="tick" aria-hidden="true"></span></li>
+                    <li><code>validate</code> <strong class="good">Rules: pass</strong><span class="tick" aria-hidden="true"></span></li>
                   </ul>
-                  <p class="muted"><span lang="ko">검토 후 승인해 주세요.</span> Ready for your review and approval.</p>
+                  <p class="muted">Ready for your review and approval.</p>
                 </li>
               </ol>
               <div class="demo-media" data-demo-media>
@@ -236,7 +229,7 @@
               </div>
             </div>
           </div>
-          <p class="demo-note">A scripted replay. The screens are real captures from the prototype, but the conversation was written for this page. The product works in Korean, and the English lines are translations.</p>
+          <p class="demo-note">A scripted replay. The screens are real captures from the prototype, but the conversation was written for this page.</p>
         </div>
       </div>
     </section>
@@ -419,7 +412,6 @@
           <li><strong>Not yet modelled.</strong> Rotation of canines and back teeth, torque, the lower arch, occlusion.</li>
           <li><strong>Computed checks.</strong> IPR adjusts space only in the calculation, and the collision check doesn't guarantee zero contact for every tooth pair.</li>
           <li><strong>Hosted or local.</strong> A hosted prototype is available on request. You can also run it on your own machine.</li>
-          <li><strong>Korean only.</strong> The prototype's interface, prescriptions and agent replies are in Korean. English input is not supported yet.</li>
           <li><strong>For review.</strong> Exports are not validated for manufacturing or wear.</li>
         </ul>
       </div>
@@ -454,12 +446,8 @@
             <p>Use is covered by the <a href="eula.html">End User License Agreement</a>: research and demonstration only, no warranty. Sample scans are CC BY 4.0, and third-party components keep their own terms.</p>
           </details>
           <details>
-            <summary>Which languages does it support?</summary>
-            <p>Korean. The prototype's interface, prescriptions and agent replies are in Korean. English input is not supported yet, and this site's examples show Korean with English translations.</p>
-          </details>
-          <details>
             <summary>What do I need to run it?</summary>
-            <p>Nothing, if you use the hosted prototype. We share its access details on request. To run it yourself you need Python 3.12 and uv. Plans compute without a key, and the conversation needs an NVIDIA API key. The <a href="/docs/#/quickstart">Quickstart</a> walks through it.</p>
+            <p>Nothing, if you use the hosted prototype. We share its access details on request. To run it yourself you need Python 3.12 and uv. Plans compute without a key, and the conversation needs an NVIDIA API key. The <a href="/docs/#/quickstart">Quickstart</a> walks through it. The current prototype interface is in Korean.</p>
           </details>
         </div>
       </div>
