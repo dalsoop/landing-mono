@@ -24,6 +24,8 @@
   <style>
     /* The page must not depend on the landing stylesheet for this: its classes set display, which beats [hidden]. */
     [hidden] { display: none !important; }
+    /* Script moves focus to the error summary and the done block; only keyboard targets show a ring. */
+    [tabindex="-1"]:focus { outline: none; }
     .rq-nav { border-bottom: 1px solid var(--line); }
     .rq-nav .container { height: var(--nav-h); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .rq-nav .brand img { width: 120px; height: auto; }
