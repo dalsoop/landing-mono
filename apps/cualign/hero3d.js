@@ -1,6 +1,6 @@
 // Hero: the sample upper arch (poseidon-000097) replaying an extraction plan cuAlign computed for it.
 // The two teeth to extract lift out and fade, then the other teeth close the space stage by stage.
-// Loaded by app.js only when WebGL works and reduced motion is off; the poster image stays otherwise.
+// Loaded by app.js only when WebGL works and reduced motion is off; the stage stays empty otherwise.
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js';
 
 // Neutral dental-viewer tones: ivory enamel, soft pink gingiva, white light.
@@ -197,7 +197,7 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
     canvas.addEventListener('pointercancel', end);
   }
 
-  // Draw once, then let the caller swap the poster out.
+  // Draw once, then let the caller fade the canvas in.
   pose(0);
   extract(0);
   renderer.render(scene, camera);

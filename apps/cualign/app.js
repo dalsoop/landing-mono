@@ -46,8 +46,8 @@
     revealables.forEach((el) => el.classList.add('is-visible'));
   }
 
-  // Hero: swap the poster for the live 3D arch once three.js and the case data have loaded.
-  // No WebGL or reduced motion: the poster stays.
+  // Hero: fade in the live 3D arch once three.js and the case data have loaded.
+  // No WebGL or reduced motion: the stage stays empty.
   const heroStage = document.querySelector('[data-hero-stage]');
   const webgl = () => {
     try {
@@ -65,7 +65,7 @@
         touch: !finePointer,
       }))
       .then(() => heroStage.classList.add('is-live'))
-      .catch(() => { /* keep the poster */ });
+      .catch(() => { /* leave the stage empty */ });
   };
   if (document.readyState === 'complete') bootHero();
   else window.addEventListener('load', bootHero, { once: true });
