@@ -1,0 +1,96 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/**"]
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "배포할 apps/ 아래 폴더 이름 (비우면 전부)"
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.pick.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: pick
+        env:
+          BEFORE: ${{ github.event.before }}
+          INPUT_APP: ${{ github.event.inputs.app }}
+        run: |
+          set -euo pipefail
+          all=$(find apps -mindepth 2 -maxdepth 2 -name site.json | cut -d/ -f2 | sort -u)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "$INPUT_APP" ]; then picked="$INPUT_APP"; else picked="$all"; fi
+          elif [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            picked="$all"
+          else
+            changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA" -- apps | cut -d/ -f2 | sort -u)
+            picked=$(comm -12 <(echo "$all") <(echo "$changed"))
+          fi
+          json=$(printf '%s\n' $picked | jq -R . | jq -sc 'map(select(length > 0))')
+          echo "apps=$json" >> "$GITHUB_OUTPUT"
+          echo "deploy: $json"
+
+  deploy:
+    needs: plan
+    if: needs.plan.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.plan.outputs.apps) }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: check secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::저장소 시크릿 CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID 가 필요합니다(README 의 저장소 설정 참고)."
+            exit 1
+          fi
+      - name: read site.json
+        id: site
+        run: |
+          set -euo pipefail
+          f="apps/${{ matrix.app }}/site.json"
+          echo "project=$(jq -r .project "$f")" >> "$GITHUB_OUTPUT"
+          echo "domain=$(jq -r '.domain // empty' "$f")" >> "$GITHUB_OUTPUT"
+      - name: ensure Pages project
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/${{ steps.site.outputs.project }}")
+          if [ "$code" = "404" ]; then
+            npx --yes wrangler@3 pages project create "${{ steps.site.outputs.project }}" --production-branch main
+          elif [ "$code" != "200" ]; then
+            echo "Pages 프로젝트 조회 실패: HTTP $code" >&2; exit 1
+          fi
+      - name: deploy
+        run: npx --yes wrangler@3 pages deploy "apps/${{ matrix.app }}" --project-name "${{ steps.site.outputs.project }}" --branch main --commit-dirty=true
+      - name: attach domain
+        if: steps.site.outputs.domain != ''
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/${{ steps.site.outputs.project }}/domains"
+          have=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" | jq -r --arg d "${{ steps.site.outputs.domain }}" '[.result[]? | select(.name == $d)] | length')
+          if [ "$have" = "0" ]; then
+            curl -sf -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+              --data "{\"name\":\"${{ steps.site.outputs.domain }}\"}" "$api" > /dev/null
+            echo "도메인 연결: ${{ steps.site.outputs.domain }}"
+          else
+            echo "도메인 이미 연결됨: ${{ steps.site.outputs.domain }}"
+          fi
