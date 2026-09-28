@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>cuAlign EULA</title>
+  <meta name="description" content="End User License Agreement for the cuAlign research prototype.">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .doc { max-width: 780px; margin: 0 auto; padding: clamp(48px, 8vw, 88px) 0 96px; }
+    .doc h1 { font-size: clamp(30px, 4vw, 42px); }
+    .doc .meta { margin-top: 12px; color: var(--muted); font: 500 13px var(--mono); }
+    .doc .summary { margin-top: 28px; padding: 20px 22px; border: 1px solid var(--accent-line); border-radius: var(--radius); background: var(--accent-soft); color: var(--text); }
+    .doc h2 { font-size: 20px; margin-top: 40px; }
+    .doc p, .doc li { margin-top: 12px; color: var(--text-2); }
+    .doc ul { padding-left: 20px; }
+    .doc a { color: var(--accent-hi); }
+  </style>
+</head>
+<body>
+  <header class="nav is-scrolled">
+    <div class="container nav-inner">
+      <a class="brand" href="./" aria-label="cuAlign home"><img src="assets/logo.png" alt="cuAlign" width="133" height="34"></a>
+      <div class="nav-actions" style="margin-left:auto">
+        <a class="btn btn-ghost btn-sm" href="./">Back to site</a>
+      </div>
+    </div>
+  </header>
+  <main class="container">
+    <article class="doc">
+      <h1>End User License Agreement</h1>
+      <p class="meta">cuAlign research prototype · Version 2026-09-28</p>
+
+      <p class="summary"><strong>In short:</strong> cuAlign is a hackathon research prototype. Use it for research and demonstration only, never for diagnosis or treatment decisions. Its plans are drafts, a dentist stays responsible for every clinical decision, and the software comes without warranty. Do not upload identifiable patient data.</p>
+
+      <h2>1. Agreement</h2>
+      <p>By installing, running or otherwise using the cuAlign software, including its web interface, command-line tools and generated files (together, “the Software”), you agree to this Agreement. If you do not agree, do not use the Software.</p>
+
+      <h2>2. Research and demonstration use only</h2>
+      <p>The Software is a research prototype built for the NVIDIA Hackathon 2026. You may use it only to research, evaluate and demonstrate its behaviour. It is not a medical device, has not been cleared or approved by any regulator, and has not been clinically validated.</p>
+
+      <h2>3. No clinical use</h2>
+      <ul>
+        <li>Do not use the Software, or anything it produces, to diagnose, plan or carry out treatment of any person.</li>
+        <li>Staging plans, rule-check results, reviewer notes and exported files are drafts for review. They may be wrong or incomplete.</li>
+        <li>Exported STL files and printable models are for reviewing plans. They are not validated for manufacturing and are not wearable aligners.</li>
+        <li>Any clinical decision remains the sole responsibility of a licensed dentist.</li>
+      </ul>
+
+      <h2>4. Known limits</h2>
+      <p>The Software currently handles the upper arch only and models tooth translation, incisor rotation correction and vertical correction. It does not model rotation of canines, premolars or molars, torque, the lower arch, occlusion or tissue response. Stage counts convert to time with a fixed wear interval and do not predict treatment duration. The current limits are listed in the project documentation.</p>
+
+      <h2>5. Patient data</h2>
+      <ul>
+        <li>Do not upload data that identifies a person, including names, national ID numbers, phone numbers or e-mail addresses.</li>
+        <li>Use pseudonyms for patient records. The Software stores patient records and scans on the machine that runs its server.</li>
+        <li>The server has no user authentication or per-user isolation. Run it in a local, trusted environment.</li>
+        <li>When the agent conversation is enabled, your messages and case context are sent to the configured NVIDIA model endpoint under your own API key.</li>
+      </ul>
+
+      <h2>6. Third-party components and data</h2>
+      <p>The Software relies on third-party software and services, including NVIDIA NeMo Agent Toolkit, NVIDIA NIM endpoints and NeMo Guardrails. Your use of those components is governed by their own licenses and terms, which you must accept separately. Sample cases are derived from the Poseidon3D dataset (Kubik &amp; Spanel, 2024, CC BY 4.0); see the <a href="https://github.com/dalsoop/nvidia-hackaton-2026-one/blob/main/apps/cualign-prototype/src/cualign/core/samples/ATTRIBUTION.md" rel="noopener">data attribution</a>.</p>
+
+      <h2>7. No warranty</h2>
+      <p>The Software is provided “as is” and “as available”, without warranty of any kind, express or implied, including warranties of accuracy, fitness for a particular purpose and non-infringement.</p>
+
+      <h2>8. Limitation of liability</h2>
+      <p>To the maximum extent permitted by law, the cuAlign team is not liable for any direct, indirect, incidental or consequential damages arising from the use of, or inability to use, the Software or its outputs.</p>
+
+      <h2>9. Changes</h2>
+      <p>We may update this Agreement. The version date above identifies the text you accepted; a new version asks for your agreement again before launch.</p>
+
+      <h2>10. Contact</h2>
+      <p>Questions and reports go to the project's <a href="https://github.com/dalsoop/nvidia-hackaton-2026-one/issues" rel="noopener">GitHub issues</a>.</p>
+    </article>
+  </main>
+  <footer class="footer">
+    <div class="container footer-inner">
+      <p class="footer-note">Research prototype. Not for clinical use. © 2026 cuAlign team.</p>
+    </div>
+  </footer>
+</body>
+</html>

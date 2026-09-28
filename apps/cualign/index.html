@@ -1,122 +1,383 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cuAlign · 투명교정 스테이징 에이전트</title>
-<meta name="description" content="cuAlign은 치과의사가 말로 전달한 조건으로 투명교정의 치아 이동 단계 계획 초안을 만들고, 계산 도구로 검증한 뒤 다시 계획하는 연구용 AI 에이전트입니다.">
-<meta property="og:title" content="cuAlign · 투명교정 스테이징 에이전트">
-<meta property="og:description" content="조건 확인, 계획, 도구 검증, 재계획, 의사 검토를 잇는 연구용 PoC입니다.">
-<meta property="og:image" content="assets/screen-ws.jpg">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23000%27/%3E%3Cpath d=%27M9 24c-1-7 1-13 4-16 1-1 2-2 3-2s2 1 3 2c3 3 5 9 4 16%27 fill=%27none%27 stroke=%27%2376b900%27 stroke-width=%273%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>cuAlign — clear aligner staging agent</title>
+  <meta name="description" content="cuAlign is a research prototype: an AI agent that drafts clear aligner staging plans from a dentist's plain-language conditions, checks them with geometry rules, and re-plans. The dentist reviews every stage in 3D and approves.">
+  <meta name="theme-color" content="#07090a">
+  <meta property="og:title" content="cuAlign — clear aligner staging agent">
+  <meta property="og:description" content="Plain-language conditions in. A rule-checked staging draft out. The dentist approves.">
+  <meta property="og:image" content="assets/ws-000001.webp">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
-<a class="skip" href="#main">본문으로 건너뛰기</a>
-<header class="top">
-  <div class="wrap top-row">
-    <a class="logo" href="#" aria-label="cuAlign 첫 화면">cu<span>Align</span></a>
-    <nav aria-label="페이지 목차">
-      <a href="#how">동작 방식</a>
-      <a href="#screens">화면</a>
-      <a href="#nvidia">NVIDIA 도구</a>
-      <a href="#scope">범위와 한계</a>
-    </nav>
-  </div>
-</header>
+  <a class="skip" href="#main">Skip to content</a>
 
-<main id="main">
-  <section class="hero wrap">
-    <p class="eyebrow">투명교정 스테이징 에이전트 · 연구용 PoC</p>
-    <h1>말로 전달한 처방 조건을<br>검증된 단계 계획 초안으로</h1>
-    <p class="lead">cuAlign은 치과의사가 전달한 조건을 바탕으로 투명교정의 치아 이동 단계 계획(staging) 초안을 만들고, 계산 도구로 검증한 뒤 문제가 있으면 다시 계획하는 AI 에이전트입니다. 진단과 처방, 최종 판단은 의사가 합니다.</p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/dalsoop/nvidia-hackaton-2026-one">GitHub 저장소 보기</a>
-      <a class="btn" href="#how">동작 방식 보기</a>
-    </div>
-    <figure class="hero-shot">
-      <img src="assets/screen-ws.jpg" width="1440" height="810" alt="cuAlign 작업대 화면. 왼쪽에 계획 카드 세 개, 가운데에 상악 치열 3D, 오른쪽에 치아별 이동 막대와 13번·12번 치아의 충돌 표시가 있는 단계 표가 보입니다.">
-      <figcaption>작업대: 에이전트가 만든 계획을 3D와 단계 표로 검토합니다. 화면은 공개 데이터셋의 샘플 케이스입니다.</figcaption>
-    </figure>
-  </section>
-
-  <section id="how" class="band">
-    <div class="wrap">
-      <h2>어떻게 동작하나요?</h2>
-      <p class="section-lead">핵심 흐름은 조건 확인, 계획, 도구 검증, 허용 범위 안의 재계획, 의사 검토입니다. 조건을 만족하는 안이 없으면 그 사실을 설명하고, 발치 금지 같은 조건을 임의로 풀지 않습니다.</p>
-      <ol class="flow">
-        <li><span class="step">1</span><h3>스캔 올리기</h3><p>치아별로 나뉜 상악 STL과 선택 잇몸 스캔을 올리거나, 샘플 케이스를 고릅니다.</p></li>
-        <li><span class="step">2</span><h3>입력 확인</h3><p>치아 번호, 누락, 치아 폭, 총생, 좌우 방향을 의사가 확인합니다. 지원하지 않는 스캔은 계획하지 않습니다.</p></li>
-        <li><span class="step">3</span><h3>계획과 단계</h3><p>에이전트가 조건을 정리하고 확장·IPR·병행·발치 가정 전략 가운데 허용된 안으로 목표 배열과 중간 단계를 계산합니다.</p></li>
-        <li><span class="step">4</span><h3>규칙 검사</h3><p>계산 도구가 공간 부족, 겹침, 이동량, 단계 수 위반을 돌려주면 다른 허용안을 시도하거나 의사에게 묻습니다.</p></li>
-        <li><span class="step">5</span><h3>의사 승인</h3><p>규칙을 통과한 계획을 의사가 3D로 검토하고 명시적으로 승인합니다. 조건을 바꾸면 새 계획을 다시 승인합니다.</p></li>
-        <li><span class="step">6</span><h3>STL 내보내기</h3><p>승인한 계획만 단계별 치아 STL로 내보냅니다. 잇몸 스캔이 있으면 단계별 프린트용 상악 모형도 함께 넣습니다.</p></li>
-      </ol>
-    </div>
-  </section>
-
-  <section id="screens" class="wrap">
-    <h2>핵심 화면</h2>
-    <div class="screens">
-      <figure>
-        <img src="assets/screen-cases.jpg" width="1440" height="810" loading="lazy" alt="케이스 목록 화면. 상태 필터, 케이스 표, 오른쪽에 FDI 치아 차트와 스캔 확인 결과, 처방이 있는 상세 패널이 보입니다.">
-        <figcaption><strong>케이스 목록</strong> 케이스마다 상태(스캔 확인 필요, 계획 필요, 위반 있음, 승인 대기, 승인됨)를 서버 값으로 계산해 보여 줍니다.</figcaption>
-      </figure>
-      <figure>
-        <img src="assets/screen-ws.jpg" width="1440" height="810" loading="lazy" alt="작업대 화면. 계획 카드, 3D 치열, 단계 막대, 단계 표가 한 화면에 있습니다.">
-        <figcaption><strong>작업대</strong> 대화로 요청하면 계획이 카드로 쌓입니다. 3D, 단계 막대, 단계 표가 같은 단계를 함께 보여 주며, 승인과 STL 내려받기는 보고 있는 계획의 카드에서 합니다.</figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <section id="nvidia" class="band">
-    <div class="wrap">
-      <h2>NVIDIA 도구가 맡는 역할</h2>
-      <p class="section-lead">도구의 개수보다 각 도구가 실행 흐름에서 맡는 역할을 기준으로 정리했습니다. 검증 수준은 저장소의 NVIDIA 활용 문서에 구분해 두었습니다.</p>
-      <dl class="stack">
-        <div><dt>NeMo Agent Toolkit</dt><dd>계획 에이전트, 읽기 전용 검토 함수, 계산 도구, 대화 서버와 계획 이벤트</dd></div>
-        <div><dt>Nemotron · NIM</dt><dd>대화와 도구 선택. 키 없는 규칙 폴백은 NIM 활용 증거로 보지 않습니다.</dd></div>
-        <div><dt>NeMo Guardrails</dt><dd>에이전트를 부르는 경로의 대화 입력·출력 검사</dd></div>
-        <div><dt>OpenShell</dt><dd>서버를 샌드박스에서 실행하는 정책 실험</dd></div>
-        <div><dt>Agent Skill</dt><dd>임상 규칙 스킬을 계획 에이전트가 필요할 때 불러 씁니다.</dd></div>
-      </dl>
-    </div>
-  </section>
-
-  <section id="scope" class="wrap">
-    <h2>현재 범위와 한계</h2>
-    <div class="scope">
-      <div class="card">
-        <h3>할 수 있는 것</h3>
-        <ul>
-          <li>상악 치아의 평행 이동, 앞니 회전 보정, 이웃보다 1mm 넘게 높거나 낮은 치아의 수직 보정을 계산합니다.</li>
-          <li>여러 전략의 계획을 비교하고, 규칙 위반을 단계별로 보여 줍니다.</li>
-          <li>승인한 계획만 단계별 치아 STL로 내보냅니다.</li>
-        </ul>
-      </div>
-      <div class="card caution">
-        <h3>아직 아닌 것</h3>
-        <ul>
-          <li>치아 이동을 계산하는 기하 PoC이며, 힘·조직 반응·실제 치료 결과를 검증한 시스템이 아닙니다.</li>
-          <li>송곳니·소구치·대구치 회전, 토크, 하악, 교합은 지원하지 않습니다.</li>
-          <li>출력은 계획 검토용 형상이며 착용 가능한 투명교정 장치가 아닙니다.</li>
-          <li>기간은 단계 수를 환산한 계획상 값이며 실제 치료 기간을 예측하지 않습니다.</li>
-          <li>사용자 인증과 데이터 격리가 없어 로컬 시연 환경을 기준으로 합니다.</li>
-        </ul>
+  <header class="nav" data-nav>
+    <div class="container nav-inner">
+      <a class="brand" href="#top" aria-label="cuAlign home"><img src="assets/logo.png" alt="cuAlign" width="133" height="34"></a>
+      <nav class="nav-links" aria-label="Primary" data-nav-links>
+        <a href="#how">How it works</a>
+        <a href="#workspace">Workspace</a>
+        <a href="#nvidia">NVIDIA stack</a>
+        <a href="#safety">Safety</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-ghost btn-sm" href="https://github.com/dalsoop/nvidia-hackaton-2026-one" rel="noopener">GitHub</a>
+        <button class="btn btn-primary btn-sm" type="button" data-launch>Launch prototype</button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-nav-toggle>
+          <span class="sr-only">Menu</span><span aria-hidden="true"></span>
+        </button>
       </div>
     </div>
-    <p class="note">샘플 케이스는 공개 데이터셋 Poseidon3D(Kubik &amp; Spanel 2024, CC-BY-4.0)의 실제 상악 스캔입니다. 규칙 통과는 임상적 적합성이나 의사 승인을 뜻하지 않습니다.</p>
-  </section>
-</main>
+    <div class="mobile-menu" id="mobile-menu" hidden data-mobile-menu>
+      <a href="#how">How it works</a>
+      <a href="#workspace">Workspace</a>
+      <a href="#nvidia">NVIDIA stack</a>
+      <a href="#safety">Safety</a>
+      <a href="#faq">FAQ</a>
+    </div>
+  </header>
 
-<footer class="foot">
-  <div class="wrap foot-row">
-    <span>cuAlign · NVIDIA 해커톤 2026 연구용 PoC</span>
-    <a href="https://github.com/dalsoop/nvidia-hackaton-2026-one">github.com/dalsoop/nvidia-hackaton-2026-one</a>
-  </div>
-</footer>
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-glow" aria-hidden="true"></div>
+      <div class="hero-stage" role="img" aria-label="A 3D upper arch from a public sample case, replaying its nine-stage expansion plan. Teeth turn green as they move." data-hero-stage>
+        <img class="hero-poster" src="assets/hero-poster.webp" width="1600" height="1201" alt="" fetchpriority="high">
+        <canvas class="hero-canvas" aria-hidden="true" data-hero-canvas></canvas>
+        <p class="hero-hud" data-hero-hud><span data-hero-hud-text>Stage 9 / 9 · Rules: pass</span></p>
+        <p class="hero-hint" aria-hidden="true">Drag to rotate</p>
+      </div>
+      <div class="container hero-inner">
+        <div class="hero-copy reveal">
+          <p class="eyebrow"><span class="dot" aria-hidden="true"></span>NVIDIA Hackathon 2026 · Research prototype</p>
+          <h1>Clear aligner staging, <span class="accent">drafted by an agent</span>, approved by the dentist.</h1>
+          <p class="lead">Tell cuAlign your conditions in plain language. It plans the tooth movements, checks every stage against geometry rules, and re-plans when a rule fails. You review the result in 3D, and nothing is exported until you approve it.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" type="button" data-launch>Launch prototype <span aria-hidden="true">→</span></button>
+            <a class="btn btn-ghost" href="#how">See how it works</a>
+          </div>
+          <p class="hero-note">Sample case poseidon-000131 from the public Poseidon3D dataset, shown with the plan cuAlign drafted for it.</p>
+        </div>
+      </div>
+      <div class="container stack-strip reveal">
+        <p>Built with</p>
+        <ul>
+          <li>NeMo Agent Toolkit</li>
+          <li>Nemotron via NIM</li>
+          <li>NeMo Guardrails</li>
+          <li>OpenShell</li>
+          <li>Agent Skills</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="workspace">
+      <div class="container">
+        <header class="section-head reveal">
+          <h2>One agent. <span class="accent">The whole staging loop.</span></h2>
+          <p>Conditions, strategies, stages, rule checks and approval live in one workspace, so the dentist never loses track of which plan is on screen.</p>
+        </header>
+        <div class="tabs reveal" data-tabs>
+          <div class="tab-list" role="tablist" aria-label="Workspace features">
+            <button role="tab" id="tab-1" aria-controls="panel-1" aria-selected="true" tabindex="0">Conditions in plain language</button>
+            <button role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1">Strategy comparison</button>
+            <button role="tab" id="tab-3" aria-controls="panel-3" aria-selected="false" tabindex="-1">Stage table &amp; collisions</button>
+            <button role="tab" id="tab-4" aria-controls="panel-4" aria-selected="false" tabindex="-1">Approval gate</button>
+            <button role="tab" id="tab-5" aria-controls="panel-5" aria-selected="false" tabindex="-1">Stage-by-stage STL</button>
+          </div>
+          <div class="tab-panels">
+            <div class="tab-panel" role="tabpanel" id="panel-1" aria-labelledby="tab-1" tabindex="0">
+              <div class="panel-media"><img src="assets/cases.webp" width="2400" height="1350" loading="lazy" alt="Case list with case status, the representative plan, violations and the dentist's prescription; the selected case shows a tooth chart and scan check."></div>
+              <div class="panel-copy">
+                <h3>Say it the way you would to a colleague</h3>
+                <p>“No extraction, within twelve months, front teeth first.” The planning agent turns the request into constraints and asks back when something is missing. Asking for extraction without tooth numbers gets a question, not a guess.</p>
+              </div>
+            </div>
+            <div class="tab-panel" role="tabpanel" id="panel-2" aria-labelledby="tab-2" tabindex="0" hidden>
+              <div class="panel-media"><img src="assets/ws-000131-approve.webp" width="2400" height="1350" loading="lazy" alt="Three plans for one case: expansion, IPR and expansion plus IPR, each with its stage count and a pass or violation badge."></div>
+              <div class="panel-copy">
+                <h3>Compare the strategies you allow</h3>
+                <p>Arch expansion, IPR, both, or extraction: cuAlign only computes the strategies the dentist permits. Every plan lands as a card with its stage count and rule result, and changing a condition creates a new plan instead of overwriting the old one.</p>
+              </div>
+            </div>
+            <div class="tab-panel" role="tabpanel" id="panel-3" aria-labelledby="tab-3" tabindex="0" hidden>
+              <div class="panel-media panel-media-narrow"><img src="assets/staging-table.webp" width="798" height="1500" loading="lazy" alt="Stage table: one vertical bar per tooth coloured by movement type, with red rings marking a collision between teeth 13 and 12 from stage 6 to stage 12."></div>
+              <div class="panel-copy">
+                <h3>See what moves, when</h3>
+                <p>One bar per tooth, coloured by movement type, spanning the stages where it moves. Collisions show up as linked rings on the exact stages they occur, and the stage bar, table and 3D view stay on the same stage.</p>
+              </div>
+            </div>
+            <div class="tab-panel" role="tabpanel" id="panel-4" aria-labelledby="tab-4" tabindex="0" hidden>
+              <div class="panel-media"><img src="assets/ws-000131-approve.webp" width="2400" height="1350" loading="lazy" alt="A passing plan card with an explicit confirmation button: confirm conditions, 3D and review, then approve."></div>
+              <div class="panel-copy">
+                <h3>Approval is explicit, and earned</h3>
+                <p>A plan with rule violations or a failed review cannot be approved. When a plan qualifies, the dentist confirms conditions, 3D and review in one deliberate step. Edit anything afterwards and the plan needs approval again.</p>
+              </div>
+            </div>
+            <div class="tab-panel" role="tabpanel" id="panel-5" aria-labelledby="tab-5" tabindex="0" hidden>
+              <div class="panel-media"><img src="assets/stage-18.webp" width="1400" height="1405" loading="lazy" alt="Final stage of the plan in 3D."></div>
+              <div class="panel-copy">
+                <h3>Files only after approval</h3>
+                <p>An approved plan exports per-tooth STL files for every stage. With a gingiva scan, the ZIP also carries a printable upper-arch model per stage. These files are for reviewing the plan; they are not wearable aligners.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="how">
+      <div class="container">
+        <header class="section-head reveal">
+          <h2>How it works <span class="accent">in cuAlign</span></h2>
+          <p>Six steps from scan to files. The agent plans and re-plans; the dentist decides.</p>
+        </header>
+        <div class="flow" data-flow>
+          <ol class="flow-rail" aria-label="Workflow steps">
+            <li data-flow-step="0">Scan</li>
+            <li data-flow-step="1">Check</li>
+            <li data-flow-step="2">Plan</li>
+            <li data-flow-step="3">Rules</li>
+            <li data-flow-step="4">Approve</li>
+            <li data-flow-step="5">STL</li>
+            <span class="flow-progress" aria-hidden="true" data-flow-progress></span>
+          </ol>
+          <div class="flow-steps">
+            <article class="flow-card" data-flow-card="0">
+              <span class="flow-num">01</span>
+              <h3>Scan</h3>
+              <p>Upload per-tooth upper-arch STL files named by Universal number (1–16), with an optional <code>gingiva.stl</code>, or open one of three sample cases built from real upper-arch scans in the public Poseidon3D dataset.</p>
+            </article>
+            <article class="flow-card" data-flow-card="1">
+              <span class="flow-num">02</span>
+              <h3>Check the input</h3>
+              <p>Before any planning, the dentist confirms what was read: tooth numbers, missing teeth, widths, crowding and orientation. A mirrored numbering can be flipped in one click; unsupported scans are stopped here.</p>
+            </article>
+            <article class="flow-card" data-flow-card="2">
+              <span class="flow-num">03</span>
+              <h3>Plan</h3>
+              <p>The planning agent, built on NeMo Agent Toolkit with Nemotron via NIM, reads the conditions, picks an allowed space strategy and calls the geometry core for the target arrangement and intermediate stages.</p>
+            </article>
+            <article class="flow-card" data-flow-card="3">
+              <span class="flow-num">04</span>
+              <h3>Rules &amp; re-plan</h3>
+              <p>Geometry rules check space shortage, collisions, per-aligner movement and stage count. On a violation the agent tries another allowed strategy or asks the dentist. It never relaxes a condition such as “no extraction” to force a pass.</p>
+            </article>
+            <article class="flow-card" data-flow-card="4">
+              <span class="flow-num">05</span>
+              <h3>Review &amp; approve</h3>
+              <p>A read-only reviewer adds a note within a bounded budget. The dentist inspects each stage in 3D and approves only a plan with no violations and a completed review.</p>
+            </article>
+            <article class="flow-card" data-flow-card="5">
+              <span class="flow-num">06</span>
+              <h3>Export STL</h3>
+              <p>Approved plans export per-tooth STL for each stage, plus printable upper-arch models when a gingiva scan is present. Unapproved plans cannot be exported, from the UI or the CLI.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="scrub">
+      <div class="container scrub reveal">
+        <div class="scrub-copy">
+          <h2>Scrub the stages. <span class="accent">Watch the rules.</span></h2>
+          <p>A real sample case: an upper arch with 4.2 mm of crowding, planned with arch expansion over 18 stages. Drag the slider to see what the rule checker flags along the way.</p>
+          <div class="scrub-control">
+            <label for="stage-range" class="scrub-label">Stage <output id="stage-out" data-stage-out>0</output> / 18</label>
+            <input id="stage-range" type="range" min="0" max="3" step="1" value="0" list="stage-ticks" data-stage-range aria-describedby="stage-caption">
+            <datalist id="stage-ticks"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option></datalist>
+            <div class="scrub-ticks" aria-hidden="true"><span>0</span><span>6</span><span>12</span><span>18</span></div>
+          </div>
+          <p class="scrub-caption" id="stage-caption" aria-live="polite" data-stage-caption>Before treatment. Fourteen upper teeth, 4.2 mm of crowding.</p>
+        </div>
+        <div class="scrub-media" data-stage-media>
+          <img src="assets/stage-00.webp" width="1400" height="1405" alt="Upper arch before treatment." class="is-active" data-stage="0">
+          <img src="assets/stage-06.webp" width="1400" height="1405" alt="Stage 6: teeth 13 and 12 highlighted in red with a collision label." loading="lazy" data-stage="1">
+          <img src="assets/stage-12.webp" width="1400" height="1405" alt="Stage 12 of the plan." loading="lazy" data-stage="2">
+          <img src="assets/stage-18.webp" width="1400" height="1405" alt="Final stage 18 of the plan." loading="lazy" data-stage="3">
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="nvidia">
+      <div class="container">
+        <header class="section-head reveal">
+          <h2>Built on <span class="accent">NVIDIA</span></h2>
+          <p>Each tool has one job in the running system. We mark what is on the demo path and what is still an experiment.</p>
+        </header>
+        <div class="cards cards-3">
+          <article class="card reveal">
+            <span class="tag tag-live">Demo path</span>
+            <h3>NeMo Agent Toolkit</h3>
+            <p>Hosts the planning agent, the bounded read-only reviewer, the geometry tools and the chat server that streams plan events to the UI.</p>
+          </article>
+          <article class="card reveal">
+            <span class="tag tag-live">Demo path</span>
+            <h3>Nemotron via NIM</h3>
+            <p>Handles the conversation and tool selection. Without an API key, a rule-based fallback still plans, and the plan is marked “review not run”.</p>
+          </article>
+          <article class="card reveal">
+            <span class="tag tag-live">Demo path</span>
+            <h3>NeMo Guardrails</h3>
+            <p>Checks input and output on every call to the agent. Requests that contain national ID, phone or email patterns are refused before they reach the model.</p>
+          </article>
+          <article class="card reveal">
+            <span class="tag tag-live">Demo path</span>
+            <h3>Agent Skills</h3>
+            <p>A clinical-rules skill is loaded into the planner's context, and a policy generated with the <code>nemotron-policy-generator</code> catalog skill feeds the content-safety check.</p>
+          </article>
+          <article class="card reveal">
+            <span class="tag tag-exp">Experiment</span>
+            <h3>OpenShell</h3>
+            <p>Runs the server in a sandbox that can write only to its own folders and reach only the NIM chat endpoint. Verified in one specific environment so far.</p>
+          </article>
+          <article class="card reveal">
+            <span class="tag tag-exp">Experiment</span>
+            <h3>NemoClaw</h3>
+            <p>Lets an OpenClaw agent call cuAlign as an MCP server, with the approval and export tools blocked. Offline tests only.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="safety">
+      <div class="container">
+        <header class="section-head reveal">
+          <h2>Safety <span class="accent">by design</span></h2>
+          <p>cuAlign is a drafting tool. The design keeps the dentist in charge at every step.</p>
+        </header>
+        <div class="cards cards-4">
+          <article class="card card-icon reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5z M14 4v5h5 M8 13h8 M8 17h6"/></svg>
+            <h3>Drafts only</h3>
+            <p>Every plan is a proposal. Diagnosis, prescription and the final decision belong to the dentist.</p>
+          </article>
+          <article class="card card-icon reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.2-7.5 9.5-4.3-1.3-7.5-4.9-7.5-9.5V6z M8.8 12.2l2.3 2.3 4.3-4.6"/></svg>
+            <h3>Rules before approval</h3>
+            <p>Plans with rule violations or a failed review cannot be approved. The agent may not relax the dentist's conditions to pass.</p>
+          </article>
+          <article class="card card-icon reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>
+            <h3>Explicit approval</h3>
+            <p>Only an approved plan exports files. Any change creates a new plan that needs approval again.</p>
+          </article>
+          <article class="card card-icon reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c.9-4 4.2-6 8-6s7.1 2 8 6 M3 3l18 18"/></svg>
+            <h3>No patient identifiers</h3>
+            <p>Patients are pseudonymous, and Guardrails refuse identifier-like input. Do not upload identifiable patient data.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="limits">
+      <div class="container limits reveal">
+        <div>
+          <h2>Status <span class="accent">&amp; limits</span></h2>
+          <p>A hackathon prototype, stated plainly.</p>
+        </div>
+        <ul class="limit-list">
+          <li><strong>Upper arch only.</strong> Translation of all teeth, rotation correction for the incisors, and vertical correction for teeth more than 1 mm above or below their neighbours.</li>
+          <li><strong>Not yet modelled.</strong> Rotation of canines, premolars and molars; torque; the lower arch; occlusion; tissue response.</li>
+          <li><strong>Duration is arithmetic.</strong> Stage count times a fixed wear interval. It is not a prediction of treatment time.</li>
+          <li><strong>IPR and collisions are computed.</strong> IPR adjusts space in the calculation without cutting the mesh, and the collision check does not guarantee zero contact for every tooth pair.</li>
+          <li><strong>Local demo.</strong> The server has no authentication or per-user isolation. Run it on your own machine.</li>
+          <li><strong>Outputs are for review.</strong> Stage STL files and printable models are not validated for manufacturing or as wearable aligners.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="faq">
+      <div class="container faq">
+        <header class="section-head reveal">
+          <h2>Frequently asked <span class="accent">questions</span></h2>
+        </header>
+        <div class="faq-list reveal">
+          <details>
+            <summary>Is cuAlign a medical device?</summary>
+            <p>No. It is a research prototype built for a hackathon. It must not be used for clinical diagnosis or treatment decisions.</p>
+          </details>
+          <details>
+            <summary>What do I need to run it?</summary>
+            <p>Python 3.12 and uv. Plans can be computed without a key; the agent conversation needs an NVIDIA API key and network access. A Docker build is also documented.</p>
+          </details>
+          <details>
+            <summary>Can I use my own scans?</summary>
+            <p>Yes, as per-tooth upper-arch STL files named by Universal number, with an optional gingiva scan. Automatic segmentation of a single-piece scan is not supported yet.</p>
+          </details>
+          <details>
+            <summary>Where do the sample cases come from?</summary>
+            <p>From real upper-arch scans in the public Poseidon3D dataset (Kubik &amp; Spanel, 2024, CC BY 4.0). The prescriptions shown with them were written by a dentist after reviewing the scans.</p>
+          </details>
+          <details>
+            <summary>Can the agent decide the treatment?</summary>
+            <p>No. It compares drafts inside the conditions the dentist allows. If no allowed strategy passes the rules, it says so instead of loosening the conditions.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="section cta-section">
+      <div class="container">
+        <div class="cta reveal">
+          <div>
+            <h2>See cuAlign <span class="accent">in action</span></h2>
+            <p>Run the prototype locally, open a sample case and ask for a plan.</p>
+            <div class="hero-actions">
+              <button class="btn btn-primary" type="button" data-launch>Launch prototype <span aria-hidden="true">→</span></button>
+              <a class="btn btn-ghost" href="https://github.com/dalsoop/nvidia-hackaton-2026-one" rel="noopener">View on GitHub</a>
+            </div>
+          </div>
+          <img src="assets/stage-06.webp" width="1400" height="1405" loading="lazy" alt="Stage 6 of a plan with a collision between teeth 13 and 12 highlighted.">
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>
+        <img src="assets/logo.png" alt="cuAlign" width="110" height="28">
+        <p>Clear aligner staging agent. Built for the NVIDIA Hackathon 2026.</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/dalsoop/nvidia-hackaton-2026-one" rel="noopener">GitHub</a>
+        <a href="eula.html">End User License Agreement</a>
+        <a href="https://github.com/dalsoop/nvidia-hackaton-2026-one/blob/main/apps/cualign-prototype/src/cualign/core/samples/ATTRIBUTION.md" rel="noopener">Data attribution</a>
+      </nav>
+      <p class="footer-note">Research prototype. Not for clinical use. © 2026 cuAlign team.</p>
+    </div>
+  </footer>
+
+  <dialog class="consent" aria-labelledby="consent-title" aria-describedby="consent-desc" data-consent>
+    <form method="dialog" class="consent-inner" data-consent-form>
+      <h2 id="consent-title">Before you launch</h2>
+      <p id="consent-desc">cuAlign is a research prototype. Using it means you accept the <a href="eula.html" target="_blank" rel="noopener">End User License Agreement</a>. In short:</p>
+      <ul>
+        <li>For research and demonstration only, never for diagnosis or treatment decisions.</li>
+        <li>Plans are drafts; the dentist remains responsible for any clinical decision.</li>
+        <li>Provided as is, without warranty. Third-party components keep their own terms.</li>
+      </ul>
+      <label class="check"><input type="checkbox" required data-consent-check> I will use cuAlign for research and demonstration only.</label>
+      <label class="check"><input type="checkbox" required data-consent-check> I will not upload identifiable patient data.</label>
+      <p class="consent-dest">Next: the setup guide on GitHub. There is no public hosted demo yet.</p>
+      <div class="consent-actions">
+        <button class="btn btn-ghost" type="button" value="cancel" data-consent-cancel>Cancel</button>
+        <button class="btn btn-primary" type="submit" value="agree" disabled data-consent-agree>Agree &amp; continue</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js" defer></script>
 </body>
 </html>
