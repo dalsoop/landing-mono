@@ -21,7 +21,7 @@ The CLI reads configs and bench files from the checkout, so a standalone wheel i
 
 ## Recipe: first plan from the CLI (no key)
 
-`cualign plan` reads a short Korean prescription with fixed rules and plans a case. No model is called.
+`cualign plan` reads a short Korean prescription with fixed rules and plans a case. No model is called. The example below means "no extraction, within 12 months, front teeth first". English input is not supported yet, and an English prescription is ignored and planned with defaults.
 
 ```sh
 uv run cualign plan "발치 없이 12개월 안에, 앞니 먼저" --case moderate
@@ -115,6 +115,8 @@ curl -s -X POST localhost:8000/api/cases/poseidon-000001/replay \
  "plans": [{"plan_id": "pa81930ad", "strategy": "ipr", "n_stages": 41, "passed": false, "...": "..."},
            {"plan_id": "pf6bf5447", "strategy": "expansion_ipr", "n_stages": 46, "passed": true, "...": "..."}]}
 ```
+
+The agent answers in Korean. This one says it made a 46-stage plan (about 10.6 months) with the expansion + IPR strategy and found no rule violations.
 
 ## Recipe: run with a key
 

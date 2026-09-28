@@ -20,9 +20,9 @@
   --red-soft: rgba(229, 72, 77, 0.12);
   --radius: 14px;
   --radius-sm: 10px;
-  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --display: 'Inter Tight', 'Inter', system-ui, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --sans: 'Inter', 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Inter Tight', 'Inter', 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, 'Pretendard Variable', 'Apple SD Gothic Neo', monospace;
   --container: 1200px;
   --gutter: clamp(16px, 4vw, 40px);
   --ease: cubic-bezier(.2, .7, .2, 1);
@@ -71,6 +71,15 @@ code { font: 500 0.88em var(--mono); color: var(--text); }
 .access-note svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
 .hero-access { margin-top: 12px; white-space: normal; }
 [data-demo-request][hidden] { display: none !important; }
+
+/* Korean originals with English translations */
+[lang="ko"] { word-break: keep-all; }
+.prompt-tr { margin-top: 10px; padding-left: 16px; font-size: 13px; color: var(--muted); }
+.msg .tr { margin-top: 3px; font-size: 12.5px; color: var(--muted); font-family: var(--sans); }
+.msg-user p.tr { font-family: var(--sans); color: var(--muted); }
+.tools .tr { margin: 0; font-size: 11.5px; }
+.tools li > span[lang="ko"] { color: var(--text); }
+.ui-lang { white-space: nowrap; margin-left: 6px; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 5px; color: var(--text-2); }
 
 /* Nav */
 .nav { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid transparent; transition: background .3s, border-color .3s; }

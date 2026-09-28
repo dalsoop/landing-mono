@@ -7,9 +7,11 @@ updated: 2026-09-28
 
 # Overview
 
-cuAlign drafts clear-aligner staging plans for the upper arch. A dentist states the prescription in Korean ("비발치, IPR 11-21·11-12·21-22 각 0.4mm"). An agent on NVIDIA NeMo Agent Toolkit turns it into constraints, computes a target arrangement and the stages to reach it, and checks every stage with geometry rules. When a strategy fails the rules it tries the next allowed one. The dentist approves in the web UI, and only then can the per-stage STL files be downloaded.
+cuAlign drafts clear-aligner staging plans for the upper arch. A dentist states the prescription in Korean, for example "비발치, IPR 11-21·11-12·21-22 각 0.4mm" (no extraction, 0.4 mm of IPR at contacts 11-21, 11-12 and 21-22). An agent on NVIDIA NeMo Agent Toolkit turns it into constraints, computes a target arrangement and the stages to reach it, and checks every stage with geometry rules. When a strategy fails the rules it tries the next allowed one. The dentist approves in the web UI, and only then can the per-stage STL files be downloaded.
 
 It's a research prototype. It isn't a medical device and hasn't been clinically validated. Source: <https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype>.
+
+The interface, prescriptions and agent replies are in Korean. English input is not supported yet.
 
 A hosted prototype runs at <https://cualign-proto.external.kr>, with access on request. You can also run it locally with the [Quickstart](quickstart.md).
 

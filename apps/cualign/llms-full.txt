@@ -15,9 +15,11 @@ updated: 2026-09-28
 
 # Overview
 
-cuAlign drafts clear-aligner staging plans for the upper arch. A dentist states the prescription in Korean ("비발치, IPR 11-21·11-12·21-22 각 0.4mm"). An agent on NVIDIA NeMo Agent Toolkit turns it into constraints, computes a target arrangement and the stages to reach it, and checks every stage with geometry rules. When a strategy fails the rules it tries the next allowed one. The dentist approves in the web UI, and only then can the per-stage STL files be downloaded.
+cuAlign drafts clear-aligner staging plans for the upper arch. A dentist states the prescription in Korean, for example "비발치, IPR 11-21·11-12·21-22 각 0.4mm" (no extraction, 0.4 mm of IPR at contacts 11-21, 11-12 and 21-22). An agent on NVIDIA NeMo Agent Toolkit turns it into constraints, computes a target arrangement and the stages to reach it, and checks every stage with geometry rules. When a strategy fails the rules it tries the next allowed one. The dentist approves in the web UI, and only then can the per-stage STL files be downloaded.
 
 It's a research prototype. It isn't a medical device and hasn't been clinically validated. Source: <https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype>.
+
+The interface, prescriptions and agent replies are in Korean. English input is not supported yet.
 
 A hosted prototype runs at <https://cualign-proto.external.kr>, with access on request. You can also run it locally with the [Quickstart](quickstart.md).
 
@@ -84,7 +86,7 @@ The CLI reads configs and bench files from the checkout, so a standalone wheel i
 
 ## Recipe: first plan from the CLI (no key)
 
-`cualign plan` reads a short Korean prescription with fixed rules and plans a case. No model is called.
+`cualign plan` reads a short Korean prescription with fixed rules and plans a case. No model is called. The example below means "no extraction, within 12 months, front teeth first". English input is not supported yet, and an English prescription is ignored and planned with defaults.
 
 ```sh
 uv run cualign plan "발치 없이 12개월 안에, 앞니 먼저" --case moderate
@@ -178,6 +180,8 @@ curl -s -X POST localhost:8000/api/cases/poseidon-000001/replay \
  "plans": [{"plan_id": "pa81930ad", "strategy": "ipr", "n_stages": 41, "passed": false, "...": "..."},
            {"plan_id": "pf6bf5447", "strategy": "expansion_ipr", "n_stages": 46, "passed": true, "...": "..."}]}
 ```
+
+The agent answers in Korean. This one says it made a 46-stage plan (about 10.6 months) with the expansion + IPR strategy and found no rule violations.
 
 ## Recipe: run with a key
 
@@ -438,7 +442,7 @@ To withdraw approval: `curl -s -X DELETE localhost:8000/api/plans/pe2399cd3/appr
 
 ## In the web UI
 
-The UI at `/ui/` is Korean. Pick a case or register a patient («환자 등록»), check the scan, describe the prescription in the chat box, read the plan card and the 3D stages, then approve and download with «확정하고 내려받기». «에이전트 없이 계산» calls the rule engine, «이 조건으로 다시 계산» replans with the form's conditions, and «검토 다시 요청» reruns a missing or failed review. Button labels are from the UI source. These docs didn't drive the UI.
+The UI at `/ui/` is Korean, and the prescription has to be written in Korean too. English input is not supported yet. Pick a case or register a patient («환자 등록»), check the scan, describe the prescription in the chat box, read the plan card and the 3D stages, then approve and download with «확정하고 내려받기». «에이전트 없이 계산» calls the rule engine, «이 조건으로 다시 계산» replans with the form's conditions, and «검토 다시 요청» reruns a missing or failed review. Button labels are from the UI source. These docs didn't drive the UI.
 
 ## Constraint fields
 
@@ -1061,7 +1065,8 @@ Read this before trusting a plan or exposing the server.
 
 - No user authentication and no per-user isolation. `/mcp` has a bearer token. Everything else is open to whoever can reach the port. Run on localhost or a trusted network.
 - Case constraints and the step flow live in memory and reset on restart. Plans, patients and scans persist in `CUALIGN_OUT`.
-- The web UI is Korean only and loads three.js from a CDN.
+- The interface, prescriptions and agent replies are in Korean. English input is not supported yet. `cualign plan` ignores an English prescription and plans with defaults.
+- The web UI loads three.js from a CDN.
 - Guardrails check chat input and output on every agent route. They don't filter the progress events or the raw steps of `/v1/workflow/full` and `/v1/workflow/atif`. On a rail error the turn proceeds with an ERROR log unless `CUALIGN_RAILS_FAIL_CLOSED=1`. The personal-data filter catches resident numbers, phone numbers and e-mail addresses, not names or chart numbers.
 - A plan request makes several model calls. If one of them fails after its retries, the whole request fails.
 

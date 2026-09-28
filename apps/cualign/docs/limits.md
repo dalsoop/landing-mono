@@ -25,7 +25,8 @@ Read this before trusting a plan or exposing the server.
 
 - No user authentication and no per-user isolation. `/mcp` has a bearer token. Everything else is open to whoever can reach the port. Run on localhost or a trusted network.
 - Case constraints and the step flow live in memory and reset on restart. Plans, patients and scans persist in `CUALIGN_OUT`.
-- The web UI is Korean only and loads three.js from a CDN.
+- The interface, prescriptions and agent replies are in Korean. English input is not supported yet. `cualign plan` ignores an English prescription and plans with defaults.
+- The web UI loads three.js from a CDN.
 - Guardrails check chat input and output on every agent route. They don't filter the progress events or the raw steps of `/v1/workflow/full` and `/v1/workflow/atif`. On a rail error the turn proceeds with an ERROR log unless `CUALIGN_RAILS_FAIL_CLOSED=1`. The personal-data filter catches resident numbers, phone numbers and e-mail addresses, not names or chart numbers.
 - A plan request makes several model calls. If one of them fails after its retries, the whole request fails.
 

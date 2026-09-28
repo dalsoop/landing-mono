@@ -115,7 +115,7 @@ To withdraw approval: `curl -s -X DELETE localhost:8000/api/plans/pe2399cd3/appr
 
 ## In the web UI
 
-The UI at `/ui/` is Korean. Pick a case or register a patient («환자 등록»), check the scan, describe the prescription in the chat box, read the plan card and the 3D stages, then approve and download with «확정하고 내려받기». «에이전트 없이 계산» calls the rule engine, «이 조건으로 다시 계산» replans with the form's conditions, and «검토 다시 요청» reruns a missing or failed review. Button labels are from the UI source. These docs didn't drive the UI.
+The UI at `/ui/` is Korean, and the prescription has to be written in Korean too. English input is not supported yet. Pick a case or register a patient («환자 등록»), check the scan, describe the prescription in the chat box, read the plan card and the 3D stages, then approve and download with «확정하고 내려받기». «에이전트 없이 계산» calls the rule engine, «이 조건으로 다시 계산» replans with the form's conditions, and «검토 다시 요청» reruns a missing or failed review. Button labels are from the UI source. These docs didn't drive the UI.
 
 ## Constraint fields
 
