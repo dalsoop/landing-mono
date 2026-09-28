@@ -10,10 +10,24 @@ function siteFromHost(hostname) {
   return SITE_LABEL.test(label) ? label : null;
 }
 
+// Static assets redirect /<site>/page.html to /<site>/page. The /<site> prefix is internal to the
+// asset layout, so strip it before the browser sees the Location header.
+function unprefixRedirect(response, site) {
+  const location = response.headers.get('location');
+  if (!location) return response;
+  const target = new URL(location, 'https://placeholder.invalid');
+  const prefix = `/${site}`;
+  if (target.pathname !== prefix && !target.pathname.startsWith(`${prefix}/`)) return response;
+  const headers = new Headers(response.headers);
+  headers.set('location', `${target.pathname.slice(prefix.length) || '/'}${target.search}${target.hash}`);
+  return new Response(response.body, { status: response.status, headers });
+}
+
 async function serve(env, request, site, pathname) {
   const url = new URL(request.url);
   url.pathname = `/${site}${pathname}`;
   const response = await env.ASSETS.fetch(new Request(url, request));
+  if (response.status >= 300 && response.status < 400) return unprefixRedirect(response, site);
   if (response.status !== 404) return response;
   // Static assets serve 404.html at its extensionless path; asking for /404.html answers with a redirect.
   url.pathname = `/${site}/404`;
