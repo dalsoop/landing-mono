@@ -130,7 +130,8 @@ code { font: 500 0.88em var(--mono); color: var(--text); }
 .hero-glow {
   position: absolute; inset: -18% -22% -10%; pointer-events: none; z-index: 0;
   background:
-    radial-gradient(closest-side at 50% 55%, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02) 50%, transparent 72%);
+    radial-gradient(closest-side at 50% 55%, rgba(118, 185, 0, .42), rgba(118, 185, 0, .12) 45%, transparent 72%),
+    conic-gradient(from 200deg at 50% 55%, transparent 0deg, rgba(147, 214, 26, .16) 40deg, transparent 90deg, transparent 180deg, rgba(118, 185, 0, .12) 230deg, transparent 290deg);
   filter: blur(36px);
   animation: breathe 8s ease-in-out infinite;
 }

@@ -1,7 +1,9 @@
 // Hero: the sample upper arch (poseidon-000097) replaying an extraction plan cuAlign computed for it.
 // The two teeth to extract lift out and fade, then the other teeth close the space stage by stage.
+// hero-fx.js adds the clear aligner trays on top of that timeline.
 // Loaded by app.js only when WebGL works and reduced motion is off; the stage stays empty otherwise.
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js';
+import { createFx } from './hero-fx.js';
 
 // Neutral dental-viewer tones: ivory enamel, soft pink gingiva, white light.
 const IVORY = new THREE.Color(0xf2ede3);
@@ -85,22 +87,22 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
   const offsetAt = (k, id) => (k > 0 ? data.stages[k - 1][id] ?? [0, 0, 0] : [0, 0, 0]);
   const angleAt = (k, id) => (k > 0 ? data.rotations[k - 1]?.[id] ?? 0 : 0);
 
-  // Pose at a fractional stage s: blend the two neighbouring stages, then turn about the crown pivot c:
-  // v' = R(v − c) + c + d  ⇒  position = d + c − R·c.
-  function pose(s) {
+  // Pose of one tooth at a fractional stage s: blend the two neighbouring stages, then turn about the crown pivot c:
+  // v' = R(v − c) + c + d  ⇒  position = d + c − R·c.  Returns [x, y, z, angle].
+  function toothPose(id, s) {
     const k0 = Math.floor(s), k1 = Math.min(n, k0 + 1), t = s - k0;
+    const a0 = offsetAt(k0, id), a1 = offsetAt(k1, id);
+    const d = [0, 1, 2].map((i) => a0[i] + (a1[i] - a0[i]) * t);
+    const deg = angleAt(k0, id) + (angleAt(k1, id) - angleAt(k0, id)) * t;
+    const a = (deg * Math.PI) / 180, c = data.pivots[id] ?? [0, 0, 0];
+    return [d[0] + c[0] - (Math.cos(a) * c[0] - Math.sin(a) * c[1]), d[1] + c[1] - (Math.sin(a) * c[0] + Math.cos(a) * c[1]), d[2], a];
+  }
+  function pose(s) {
     for (const [id, m] of Object.entries(teeth)) {
       if (removed.has(id)) continue;
-      const a0 = offsetAt(k0, id), a1 = offsetAt(k1, id);
-      const d = [0, 1, 2].map((i) => a0[i] + (a1[i] - a0[i]) * t);
-      const deg = angleAt(k0, id) + (angleAt(k1, id) - angleAt(k0, id)) * t;
-      const a = (deg * Math.PI) / 180, c = data.pivots[id] ?? [0, 0, 0];
-      m.rotation.set(0, 0, a);
-      m.position.set(
-        d[0] + c[0] - (Math.cos(a) * c[0] - Math.sin(a) * c[1]),
-        d[1] + c[1] - (Math.sin(a) * c[0] + Math.cos(a) * c[1]),
-        d[2],
-      );
+      const p = toothPose(id, s);
+      m.rotation.set(0, 0, p[3]);
+      m.position.set(p[0], p[1], p[2]);
     }
   }
 
@@ -117,20 +119,27 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
     }
   }
 
-  // Where the loop is at time ms: stage s and extraction progress out.
+  // The effect layer (hero-fx.js) can add an intro and a custom stage schedule.
+  const fx = createFx({ THREE, scene, model, teeth, gum, data, removed, n, radius, lift, toothPose, renderer, camera });
+  const INTRO_MS = fx.introMs ?? 0;
+  const playS = fx.playS ?? ((p) => n * ease(p));
+
+  // Where the loop is at time ms: stage s, extraction progress out, and the phase with its own progress.
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
   function timeline(ms) {
-    let t = ms % CYCLE_MS;
-    if (t < SHOW_MS) return { s: 0, out: 0 };
+    let t = ms % (CYCLE_MS + INTRO_MS);
+    if (t < INTRO_MS) return { s: 0, out: 0, phase: 'intro', p: t / INTRO_MS };
+    t -= INTRO_MS;
+    if (t < SHOW_MS) return { s: 0, out: 0, phase: 'show', p: t / SHOW_MS };
     t -= SHOW_MS;
-    if (t < LIFT_MS) return { s: 0, out: easeOut(t / LIFT_MS) };
+    if (t < LIFT_MS) return { s: 0, out: easeOut(t / LIFT_MS), phase: 'lift', p: t / LIFT_MS };
     t -= LIFT_MS;
-    if (t < PLAY_MS) return { s: n * ease(t / PLAY_MS), out: 1 };
+    if (t < PLAY_MS) return { s: playS(t / PLAY_MS), out: 1, phase: 'play', p: t / PLAY_MS };
     t -= PLAY_MS;
-    if (t < HOLD_MS) return { s: n, out: 1 };
+    if (t < HOLD_MS) return { s: n, out: 1, phase: 'hold', p: t / HOLD_MS };
     t -= HOLD_MS;
     const b = ease(t / BACK_MS);
-    return { s: n * (1 - b), out: 1 - b };
+    return { s: n * (1 - b), out: 1 - b, phase: 'back', p: t / BACK_MS };
   }
 
   // Fit the arch into the canvas.
@@ -167,6 +176,7 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
     const at = timeline(clock);
     pose(at.s);
     extract(at.out);
+    fx.update(at, dt);
     renderer.render(scene, camera);
     if (visible) raf = requestAnimationFrame(frame);
   }
@@ -200,6 +210,7 @@ export async function mountHero({ stage, canvas, dataUrl, touch }) {
   // Draw once, then let the caller fade the canvas in.
   pose(0);
   extract(0);
+  fx.update(timeline(0), 0);
   renderer.render(scene, camera);
   start();
   return { stages: n };
