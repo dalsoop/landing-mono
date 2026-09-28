@@ -10,8 +10,6 @@ const HOLD_MS = 1600;   // rest on the final stage
 const BACK_MS = 1100;   // ease back to stage 0
 const REST_MS = 700;    // rest before the next run
 
-// Universal 1..16 → FDI 18..11, 21..28 (the numbers a dentist reads).
-const fdi = (u) => (u <= 8 ? 19 - u : 12 + u);
 const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
 function geometry(part) {
@@ -22,7 +20,7 @@ function geometry(part) {
   return g;
 }
 
-export async function mountHero({ stage, canvas, hud, dataUrl, touch, parallaxRoot }) {
+export async function mountHero({ stage, canvas, dataUrl, touch }) {
   const res = await fetch(dataUrl);
   if (!res.ok) throw new Error(`hero data ${res.status}`);
   const data = await res.json();
@@ -94,16 +92,6 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch, parallaxRo
       if (bad.has(id)) m.material.color.copy(RED);
       else m.material.color.copy(IVORY).lerp(GREEN, Math.min(1, Math.hypot(...d) / maxMove) * 0.85);
     }
-    const list = badAt[shown] ?? [];
-    const collision = list.find((v) => v.type === 'collision');
-    const rules = collision
-      ? `collision ${collision.teeth.map(fdi).join('–')}`
-      : list.length ? `${list.length} rule ${list.length === 1 ? 'issue' : 'issues'}` : 'Rules: pass';
-    const text = `${shown === 0 ? 'Before treatment' : `Stage ${shown} / ${n}`} · ${rules}`;
-    if (hud.textContent !== text) {
-      hud.textContent = text;
-      hud.classList.toggle('is-warn', list.length > 0);
-    }
   }
 
   // Fit the arch into the canvas.
@@ -123,12 +111,10 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch, parallaxRo
   new ResizeObserver(resize).observe(canvas);
   resize();
 
-  // Timeline, auto-rotation, drag, pointer parallax and scroll tilt.
+  // Timeline, auto-rotation, drag and scroll tilt.
   const BASE_PITCH = 0.62;
   let clock = 0, prev = performance.now(), dragging = null;
   let dragYaw = 0, dragPitch = 0, spin = 0, visible = true, raf = 0;
-  // Parallax: the pointer anywhere over the hero leans the arch toward it (target → eased value).
-  const lean = { x: 0, y: 0, tx: 0, ty: 0 };
 
   function stageAt(ms) {
     const cycle = PLAY_MS + HOLD_MS + BACK_MS + REST_MS;
@@ -143,15 +129,11 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch, parallaxRo
     raf = 0;
     const dt = Math.min(64, now - prev); prev = now;
     if (!dragging) { clock += dt; spin += dt * 0.00018; }
-    const k = 1 - Math.pow(0.001, dt / 1000);   // frame-rate independent easing
-    lean.x += (lean.tx - lean.x) * k; lean.y += (lean.ty - lean.y) * k;
     const rect = stage.getBoundingClientRect();
     const scrolled = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height)));
-    yaw.rotation.y = Math.sin(spin) * 0.55 + dragYaw + lean.x * 0.35;
-    yaw.rotation.z = -lean.x * 0.06;
-    pitch.rotation.x = BASE_PITCH + dragPitch + lean.y * 0.22 + scrolled * 0.45;
-    yaw.position.x = lean.x * radius * 0.05;
-    yaw.position.y = -scrolled * radius * 0.25 - lean.y * radius * 0.04;
+    yaw.rotation.y = Math.sin(spin) * 0.55 + dragYaw;
+    pitch.rotation.x = BASE_PITCH + dragPitch + scrolled * 0.45;
+    yaw.position.y = -scrolled * radius * 0.25;
     pose(stageAt(clock));
     renderer.render(scene, camera);
     if (visible) raf = requestAnimationFrame(frame);
@@ -168,13 +150,6 @@ export async function mountHero({ stage, canvas, hud, dataUrl, touch, parallaxRo
   });
 
   if (!touch) {
-    const root = parallaxRoot || stage;
-    root.addEventListener('pointermove', (e) => {
-      const r = root.getBoundingClientRect();
-      lean.tx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
-      lean.ty = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
-    });
-    root.addEventListener('pointerleave', () => { lean.tx = 0; lean.ty = 0; });
     canvas.addEventListener('pointerdown', (e) => {
       dragging = { x: e.clientX, y: e.clientY, yaw: dragYaw, pitch: dragPitch };
       canvas.setPointerCapture(e.pointerId);

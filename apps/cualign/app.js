@@ -60,8 +60,6 @@
       .then(({ mountHero }) => mountHero({
         stage: heroStage,
         canvas: heroStage.querySelector('[data-hero-canvas]'),
-        hud: document.querySelector('[data-hero-hud-text]'),
-        parallaxRoot: document.querySelector('[data-hero]'),
         dataUrl: 'assets/hero-case.json',
         touch: !finePointer,
       }))
@@ -99,9 +97,10 @@
 
     const rail = [...document.querySelectorAll('[data-demo-steps] [data-step-for]')];
     const STEP_OF_MSG = [0, 1, 1, 2, 3];   // message index → step on the rail (draft and check share a step)
-    const showMedia = (i) => {
-      figures.forEach((f) => f.classList.toggle('is-active', Number(f.dataset.media) === i));
-      const at = STEP_OF_MSG[i] ?? 0;
+    const MEDIA_OF_MSG = [0, 1, 2, 2, 3];  // message index → figure (the revision request keeps the collision in view)
+    const showMedia = (fig, msg = figures.length) => {
+      figures.forEach((f) => f.classList.toggle('is-active', Number(f.dataset.media) === fig));
+      const at = STEP_OF_MSG[msg] ?? rail.length - 1;
       rail.forEach((r) => {
         const k = Number(r.dataset.stepFor);
         r.classList.toggle('is-active', k === at);
@@ -115,7 +114,7 @@
         const t = m.querySelector('[data-type]');
         if (t) t.textContent = texts[i];
       });
-      showMedia(0);
+      showMedia(0, 0);
     };
     const showAll = () => {
       msgs.forEach((m) => {
@@ -135,7 +134,7 @@
         await wait(i === 0 ? 300 : 650);
         if (!alive()) return;
         m.classList.add('is-shown');
-        showMedia(Math.min(i, figures.length - 1));
+        showMedia(MEDIA_OF_MSG[i] ?? 0, i);
         const t = m.querySelector('[data-type]');
         if (t) {
           m.classList.add('is-typing');
@@ -156,7 +155,7 @@
       demo.classList.remove('is-playing');
     };
 
-    msgs.forEach((m, i) => m.addEventListener('click', () => { if (m.classList.contains('is-shown')) showMedia(Math.min(i, figures.length - 1)); }));
+    msgs.forEach((m, i) => m.addEventListener('click', () => { if (m.classList.contains('is-shown')) showMedia(MEDIA_OF_MSG[i] ?? 0, i); }));
 
     if (reduceMotion || !('IntersectionObserver' in window)) {
       showAll();
@@ -173,23 +172,12 @@
 
 
   // Stage scrubber: four real stages from the sample case.
-  const STAGES = [
-    { stage: 0, text: 'Before treatment. 4.2 mm of crowding.' },
-    { stage: 6, text: 'Stage 6. Collision between 13 and 12, flagged in red.', warn: true },
-    { stage: 12, text: 'Stage 12. The collision is still flagged, and the agent reports it.', warn: true },
-    { stage: 18, text: 'Final stage. This plan still breaks rules, so approval stays locked.', warn: true },
-  ];
+  const STAGES = ['Before treatment', 'Stage 6 of 18, collision flagged', 'Stage 12 of 18, collision flagged', 'Final stage'];
   const range = document.querySelector('[data-stage-range]');
-  const out = document.querySelector('[data-stage-out]');
-  const caption = document.querySelector('[data-stage-caption]');
   const imgs = [...document.querySelectorAll('[data-stage-media] img')];
-  if (range && out && caption) {
+  if (range) {
     const show = (i) => {
-      const s = STAGES[i];
-      out.textContent = String(s.stage);
-      caption.textContent = s.text;
-      caption.classList.toggle('is-warn', Boolean(s.warn));
-      range.setAttribute('aria-valuetext', `Stage ${s.stage} of 18`);
+      range.setAttribute('aria-valuetext', STAGES[i]);
       imgs.forEach((img) => img.classList.toggle('is-active', Number(img.dataset.stage) === i));
     };
     range.addEventListener('input', () => show(Number(range.value)));

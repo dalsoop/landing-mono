@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>cuAlign · Aligner staging by conversation</title>
-  <meta name="description" content="A research prototype for dentists. Describe the aligner prescription and an agent drafts, checks and revises every stage. You approve before export.">
+  <title>cuAlign · Change the aligner plan in a sentence</title>
+  <meta name="description" content="Change an aligner plan by describing it. cuAlign redraws every stage, checks collisions and space, and exports nothing until the dentist approves.">
   <link rel="canonical" href="https://cualign.external.kr/">
   <meta name="theme-color" content="#050605">
   <meta name="color-scheme" content="dark">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="cuAlign">
-  <meta property="og:title" content="cuAlign · Aligner staging by conversation">
-  <meta property="og:description" content="Describe the prescription. An agent drafts, checks and revises every aligner stage. The dentist approves.">
+  <meta property="og:title" content="cuAlign · Change the aligner plan in a sentence">
+  <meta property="og:description" content="Tell cuAlign the change you want. It redraws every aligner stage, checks it, and waits for your approval.">
   <meta property="og:url" content="https://cualign.external.kr/">
   <meta property="og:image" content="https://cualign.external.kr/assets/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="cuAlign logo and tagline beside a 3D upper arch with moving teeth highlighted in green.">
+  <meta property="og:image:alt" content="cuAlign logo with the line “Change the plan in a sentence. Every stage follows.” beside a 3D upper arch.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="cuAlign · Aligner staging by conversation">
-  <meta name="twitter:description" content="Describe the prescription. An agent drafts, checks and revises every aligner stage. The dentist approves.">
+  <meta name="twitter:title" content="cuAlign · Change the aligner plan in a sentence">
+  <meta name="twitter:description" content="Tell cuAlign the change you want. It redraws every aligner stage, checks it, and waits for your approval.">
   <meta name="twitter:image" content="https://cualign.external.kr/assets/og.png">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
@@ -73,9 +73,8 @@
       <div class="hero-grid-bg" aria-hidden="true"></div>
       <div class="container hero-inner">
         <div class="hero-copy">
-          <p class="eyebrow reveal"><span class="pulse" aria-hidden="true"></span>Research prototype · NVIDIA Hackathon 2026</p>
-          <h1 class="reveal">Aligner staging by conversation.<br><span class="dim">The dentist decides.</span></h1>
-          <p class="lead reveal">Built for dentists who plan clear aligners. Describe the prescription and an agent drafts every stage, then checks it with geometry tools. Nothing gets exported until you approve it.</p>
+          <h1 class="reveal">Change the plan in a sentence.<br><span class="dim">Every stage follows.</span></h1>
+          <p class="lead reveal">Tell cuAlign what you want, like no extraction or fixed canines. It redraws every aligner stage, checks for collisions and space problems, and exports nothing until you approve.</p>
 
           <a class="prompt reveal" href="#how" aria-label="See how the agent handles the prescription “No extraction, keep the canines fixed.”">
             <span class="prompt-label" aria-hidden="true">Prescription</span>
@@ -96,8 +95,6 @@
             <img class="hero-poster" src="assets/hero-poster.webp" width="1600" height="1201" alt="" fetchpriority="high">
             <canvas class="hero-canvas" aria-hidden="true" data-hero-canvas></canvas>
           </div>
-          <p class="hero-hud" aria-hidden="true"><span class="hud-dot"></span><span data-hero-hud-text>Stage 9 / 9 · Rules: pass</span></p>
-          <p class="hero-hint" aria-hidden="true">Drag to rotate</p>
         </div>
       </div>
       <div class="container status-strip reveal" role="note" aria-label="Status">
@@ -148,7 +145,7 @@
       <div class="container">
         <header class="split-head reveal">
           <p class="kicker"><span>02</span> How it works</p>
-          <h2>From prescription to print files<br><span class="dim">in one conversation.</span></h2>
+          <h2>Ask for a change.<br><span class="dim">Get a new, checked plan.</span></h2>
           <div class="split-copy">
             <p>Each step shows who acts. The agent proposes, and every call that matters stays with you.</p>
           </div>
@@ -180,16 +177,11 @@
                 </li>
                 <li class="msg msg-agent" data-step="1">
                   <span class="who">Agent</span>
-                  <p>Drafting with your conditions.</p>
-                  <ul class="tools">
-                    <li><code>set_constraints</code> No extraction · canines locked<span class="tick" aria-hidden="true"></span></li>
-                    <li><code>propose_target</code> Target arrangement<span class="tick" aria-hidden="true"></span></li>
-                    <li><code>plan_stages</code> Movement stages<span class="tick" aria-hidden="true"></span></li>
-                  </ul>
+                  <p>Got it. I set the target arrangement and drafted every stage with the canines held in place.</p>
                 </li>
                 <li class="msg msg-agent msg-warn" data-step="2">
-                  <span class="who">Agent · <code>validate</code></span>
-                  <p><strong class="bad">Collision between 13 and 12.</strong> Marked in red. Suggested fix: allow IPR, canines still fixed.</p>
+                  <span class="who">Agent</span>
+                  <p><strong class="bad">Two teeth collide</strong> in the middle stages, marked in red. Allowing IPR would make room while the canines stay fixed.</p>
                 </li>
                 <li class="msg msg-user" data-step="3">
                   <span class="who">Dentist</span>
@@ -197,39 +189,31 @@
                 </li>
                 <li class="msg msg-agent msg-ok" data-step="4">
                   <span class="who">Agent</span>
-                  <p>New plan. Kept <span class="chip">No extraction</span> <span class="chip">Canines locked</span> Added <span class="chip chip-new">IPR</span></p>
-                  <ul class="tools">
-                    <li><code>plan_stages</code> Expansion + IPR<span class="tick" aria-hidden="true"></span></li>
-                    <li><code>validate</code> <strong class="good">Rules: pass</strong><span class="tick" aria-hidden="true"></span></li>
-                  </ul>
-                  <p class="muted">Ready for your review and approval.</p>
+                  <p>New plan. Kept <span class="chip">No extraction</span> <span class="chip">Canines fixed</span> Added <span class="chip chip-new">IPR</span></p>
+                  <p><strong class="good">It passes the rule check.</strong> Review it and approve when you're ready.</p>
                 </li>
               </ol>
               <div class="demo-media" data-demo-media>
                 <figure class="is-active" data-media="0">
-                  <img src="assets/cases.webp" width="2400" height="1350" loading="lazy" alt="Case list with each case's status, plan, violations and prescription.">
-                  <figcaption>Case and prescription</figcaption>
+                  <img src="assets/arch-000001-s00.webp" width="1000" height="830" loading="lazy" alt="A crowded upper arch before treatment.">
+                  <figcaption>Before treatment</figcaption>
                 </figure>
                 <figure data-media="1">
-                  <img src="assets/ws-000001.webp" width="2400" height="1350" loading="lazy" alt="Workspace with the plan, the 3D arch, the stage bar and the stage table.">
-                  <figcaption>Draft plan in the workspace</figcaption>
+                  <img src="assets/arch-000001-s18.webp" width="1000" height="830" loading="lazy" alt="The drafted final stage. Teeth that moved are shaded green.">
+                  <figcaption>The drafted plan, final stage</figcaption>
                 </figure>
                 <figure data-media="2">
-                  <img src="assets/stage-06.webp" width="1400" height="1405" loading="lazy" alt="A stage in 3D with teeth 13 and 12 highlighted in red and a collision label.">
-                  <figcaption>The collision, highlighted in 3D</figcaption>
+                  <img src="assets/arch-000001-s06.webp" width="1000" height="830" loading="lazy" alt="A middle stage with two front teeth shaded red where they collide.">
+                  <figcaption>The collision, in red</figcaption>
                 </figure>
                 <figure data-media="3">
-                  <img src="assets/staging-table.webp" width="798" height="1500" loading="lazy" alt="Stage table: one bar per tooth coloured by movement type, with red rings on the stages where 13 and 12 collide.">
-                  <figcaption>Where and when it happens</figcaption>
-                </figure>
-                <figure data-media="4">
-                  <img src="assets/ws-000131-approve.webp" width="2400" height="1350" loading="lazy" alt="Plan cards, each with its stage count and a pass or violation badge, and an explicit approval step.">
-                  <figcaption>New plan, ready for approval</figcaption>
+                  <img src="assets/arch-000131-pass.webp" width="1000" height="830" loading="lazy" alt="The final stage of a plan that passes the rule check.">
+                  <figcaption>A plan that passes</figcaption>
                 </figure>
               </div>
             </div>
           </div>
-          <p class="demo-note">A scripted replay. The screens are real captures from the prototype, but the conversation was written for this page.</p>
+          <p class="demo-note">A scripted replay. The 3D views are rendered from plans cuAlign computed for two public sample scans. The conversation was written for this page.</p>
         </div>
       </div>
     </section>
@@ -239,21 +223,20 @@
       <div class="container scrub">
         <div class="scrub-copy reveal">
           <p class="kicker"><span>03</span> Review</p>
-          <h2>Check every stage<br><span class="dim">before you approve.</span></h2>
-          <p>Drag through an 18-stage plan for a real sample scan and see where the rule check flags it.</p>
+          <h2>See every stage<br><span class="dim">before you sign off.</span></h2>
+          <p>Drag through a real 18-stage plan. Teeth turn green as they move, and red marks a collision the rule check found.</p>
           <div class="scrub-control">
-            <label for="stage-range" class="scrub-label">Stage <output id="stage-out" data-stage-out>0</output> / 18</label>
-            <input id="stage-range" type="range" min="0" max="3" step="1" value="0" data-stage-range aria-describedby="stage-caption">
-            <div class="scrub-ticks" aria-hidden="true"><span>0</span><span>6</span><span>12</span><span>18</span></div>
+            <label for="stage-range" class="sr-only">Treatment stage</label>
+            <input id="stage-range" type="range" min="0" max="3" step="1" value="0" data-stage-range>
+            <div class="scrub-ends" aria-hidden="true"><span>Before</span><span>After</span></div>
           </div>
-          <p class="scrub-caption" id="stage-caption" aria-live="polite" data-stage-caption>Before treatment. 4.2 mm of crowding.</p>
         </div>
         <div class="scrub-media reveal" data-stage-media>
           <div class="scrub-glow" aria-hidden="true"></div>
-          <img src="assets/stage-00.webp" width="1400" height="1405" alt="Upper arch before treatment." class="is-active" data-stage="0">
-          <img src="assets/stage-06.webp" width="1400" height="1405" alt="Stage 6: teeth 13 and 12 highlighted in red with a collision label." loading="lazy" data-stage="1">
-          <img src="assets/stage-12.webp" width="1400" height="1405" alt="Stage 12 of the plan." loading="lazy" data-stage="2">
-          <img src="assets/stage-18.webp" width="1400" height="1405" alt="Final stage 18 of the plan." loading="lazy" data-stage="3">
+          <img src="assets/arch-000001-s00.webp" width="1000" height="830" alt="Upper arch before treatment." class="is-active" data-stage="0">
+          <img src="assets/arch-000001-s06.webp" width="1000" height="830" alt="An early stage. Two front teeth are shaded red where they collide." loading="lazy" data-stage="1">
+          <img src="assets/arch-000001-s12.webp" width="1000" height="830" alt="A later stage. The collision is still flagged in red." loading="lazy" data-stage="2">
+          <img src="assets/arch-000001-s18.webp" width="1000" height="830" alt="The final stage of the plan." loading="lazy" data-stage="3">
         </div>
       </div>
     </section>
@@ -298,7 +281,7 @@
       <div class="container">
         <header class="split-head reveal">
           <p class="kicker"><span>05</span> How we evaluate</p>
-          <h2>No certification yet.<br><span class="dim">Here is what we test.</span></h2>
+          <h2>No certification yet.<br><span class="dim">The tests are public. Re-run them.</span></h2>
           <div class="split-copy">
             <p>Everything below is in the public repository and can be re-run.</p>
           </div>
@@ -335,7 +318,7 @@
       <div class="container">
         <header class="split-head reveal">
           <p class="kicker"><span>06</span> Compatibility</p>
-          <h2>It reads and writes<br><span class="dim">plain STL files.</span></h2>
+          <h2>Works from per-tooth STL,<br><span class="dim">hands back STL for every stage.</span></h2>
         </header>
         <div class="io reveal">
           <div class="io-card">
@@ -359,7 +342,7 @@
       <div class="container">
         <header class="split-head reveal">
           <p class="kicker"><span>07</span> Built on NVIDIA</p>
-          <h2>Built on NVIDIA.<br><span class="dim">Each part has one job.</span></h2>
+          <h2>The NVIDIA stack underneath,<br><span class="dim">and what each piece handles.</span></h2>
         </header>
         <div class="grid-lines grid-4">
           <article class="gcell reveal">
@@ -405,7 +388,7 @@
       <div class="container limits">
         <header class="reveal">
           <p class="kicker"><span>09</span> Current scope</p>
-          <h2>A research prototype.<br><span class="dim">Here is its scope.</span></h2>
+          <h2>What it handles today,<br><span class="dim">and what it doesn't yet.</span></h2>
         </header>
         <ul class="limit-list reveal">
           <li><strong>Upper arch only.</strong> Translation, incisor rotation and vertical correction.</li>
@@ -457,7 +440,7 @@
     <section class="cta-section">
       <div class="cta-glow" aria-hidden="true"></div>
       <div class="container cta reveal">
-        <h2>Open a sample case.<br><span class="dim">Describe a prescription.</span></h2>
+        <h2>Try a plan change<br><span class="dim">on a sample case.</span></h2>
         <p>We share access to the hosted prototype on request. The docs cover running it yourself.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#" target="_blank" rel="noopener" hidden data-demo-request>Request a demo <span aria-hidden="true">→</span></a>
