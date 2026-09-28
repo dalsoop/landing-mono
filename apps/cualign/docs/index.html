@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cuAlign Docs</title>
+  <meta name="description" content="How to run cuAlign, upload scans, plan, approve and export, and drive it from another agent over MCP. Every page is also plain Markdown for agents.">
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="alternate" type="text/plain" title="llms.txt" href="../llms.txt">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07090a;
+      --surface: #101416;
+      --surface-2: #151a1d;
+      --line: #1f262a;
+      --line-strong: #2d363b;
+      --text: #eef1f3;
+      --text-2: #b6bec5;
+      --muted: #8a949c;
+      --accent: #76b900;
+      --accent-hi: #8fd420;
+      --accent-ink: #0a1400;
+      --accent-soft: rgba(118, 185, 0, 0.12);
+      --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      --top-h: 60px;
+      --side-w: 264px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-padding-top: calc(var(--top-h) + 16px); }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent-hi); text-underline-offset: 3px; }
+    :focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; border-radius: 4px; }
+    .skip { position: absolute; left: 16px; top: -48px; z-index: 50; background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 8px; font-weight: 600; text-decoration: none; }
+    .skip:focus { top: 12px; }
+
+    .top { position: sticky; top: 0; z-index: 20; height: var(--top-h); display: flex; align-items: center; gap: 16px; padding: 0 16px; background: rgba(7, 9, 10, 0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); font-weight: 600; }
+    .brand img { height: 22px; width: auto; }
+    .brand span { color: var(--muted); font-weight: 500; padding-left: 10px; border-left: 1px solid var(--line-strong); }
+    .top nav { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+    .top nav a { color: var(--text-2); text-decoration: none; font-size: 14px; padding: 6px 10px; border-radius: 8px; }
+    .top nav a:hover { color: var(--text); background: var(--surface); }
+    .menu-btn { display: none; background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); border-radius: 8px; font: 500 14px var(--font); padding: 6px 12px; cursor: pointer; }
+
+    .layout { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); max-width: 1320px; margin: 0 auto; }
+    .side { position: sticky; top: var(--top-h); align-self: start; height: calc(100vh - var(--top-h)); overflow-y: auto; padding: 24px 12px 24px 16px; border-right: 1px solid var(--line); }
+    .side h2 { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 8px 10px; }
+    .side ol { list-style: none; margin: 0; padding: 0; }
+    .side nav a { display: block; padding: 7px 10px; border-radius: 8px; color: var(--text-2); text-decoration: none; font-size: 15px; }
+    .side nav a:hover { background: var(--surface); color: var(--text); }
+    .side nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-hi); font-weight: 600; }
+    .side .agent-box { margin: 24px 8px 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .side .agent-box code { font-family: var(--mono); color: var(--accent-hi); font-size: 12px; }
+
+    main { min-width: 0; padding: 32px clamp(16px, 4vw, 56px) 80px; }
+    .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px; }
+    .bar a, .bar button { display: inline-flex; align-items: center; gap: 6px; font: 500 13px var(--font); color: var(--text-2); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 12px; text-decoration: none; cursor: pointer; }
+    .bar a:hover, .bar button:hover { color: var(--text); border-color: var(--accent); }
+    .bar button[data-done] { color: var(--accent-hi); border-color: var(--accent); }
+
+    article { max-width: 860px; }
+    article h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.2; letter-spacing: -0.02em; margin: 8px 0 20px; }
+    article h2 { font-size: 23px; margin: 44px 0 14px; padding-top: 8px; border-top: 1px solid var(--line); }
+    article h3 { font-size: 18px; margin: 30px 0 10px; }
+    article h1:focus { outline: none; }
+    article p, article li { color: var(--text-2); }
+    article strong { color: var(--text); }
+    article ul, article ol { padding-left: 1.3em; }
+    article code { font-family: var(--mono); font-size: 0.86em; color: var(--accent-hi); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 0.1em 0.35em; overflow-wrap: anywhere; }
+    .code { position: relative; margin: 16px 0; }
+    .code pre { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 72px 14px 16px; overflow-x: auto; font: 13px/1.6 var(--mono); color: var(--text); }
+    .code pre code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; overflow-wrap: normal; }
+    .code button { position: absolute; top: 8px; right: 8px; font: 500 12px var(--font); color: var(--muted); background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 6px; padding: 3px 8px; cursor: pointer; box-shadow: -8px 0 12px var(--surface); }
+    .code button:hover, .code button:focus-visible { color: var(--text); }
+    .table { overflow-x: auto; margin: 16px 0; border: 1px solid var(--line); border-radius: 10px; }
+    .table table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    .table th, .table td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+    .table th { color: var(--text); background: var(--surface); font-weight: 600; white-space: nowrap; }
+    .table td { color: var(--text-2); min-width: 120px; }
+    .table tr:last-child td { border-bottom: 0; }
+    .table td code { white-space: normal; }
+    .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); }
+    .pager a { display: block; max-width: 48%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--text); }
+    .pager a:hover { border-color: var(--accent); }
+    .pager small { display: block; color: var(--muted); font-size: 12px; }
+    .pager .next { margin-left: auto; text-align: right; }
+    .note { color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: minmax(0, 1fr); }
+      .menu-btn { display: inline-block; }
+      .top nav .wide { display: none; }
+      .side { display: none; position: fixed; inset: var(--top-h) 0 0 0; height: auto; z-index: 15; background: var(--bg); border-right: 0; padding: 16px; }
+      .side[data-open] { display: block; }
+      main { padding-top: 20px; }
+    }
+    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#doc">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../"><img src="../assets/logo.png" alt="cuAlign" width="87" height="22"><span>Docs</span></a>
+    <nav aria-label="Site">
+      <a class="wide" href="../llms.txt">llms.txt</a>
+      <a class="wide" href="https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype" rel="noopener">GitHub</a>
+      <button class="menu-btn" type="button" aria-controls="side" aria-expanded="false">Menu</button>
+    </nav>
+  </header>
+  <div class="layout">
+    <aside class="side" id="side">
+      <nav aria-label="Documentation">
+        <h2>Documentation</h2>
+        <ol id="toc"></ol>
+      </nav>
+      <div class="agent-box">
+        <strong>For agents:</strong> read <a href="../llms.txt"><code>/llms.txt</code></a> or <a href="../llms-full.txt"><code>/llms-full.txt</code></a>. Every page is plain Markdown at <code>/docs/&lt;page&gt;.md</code>.
+      </div>
+    </aside>
+    <main id="doc" tabindex="-1">
+      <div class="bar">
+        <a id="raw" href="#">View as Markdown</a>
+        <button id="copy" type="button">Copy for LLM</button>
+      </div>
+      <article id="content" aria-live="polite"><p class="note">Loading…</p></article>
+      <nav class="pager" id="pager" aria-label="Previous and next page"></nav>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script>
+  (function () {
+    const toc = document.getElementById('toc');
+    const content = document.getElementById('content');
+    const pager = document.getElementById('pager');
+    const raw = document.getElementById('raw');
+    const copy = document.getElementById('copy');
+    const side = document.getElementById('side');
+    const menu = document.querySelector('.menu-btn');
+    let pages = [];
+    let current = { slug: null, text: '' };
+    let first = true;
+
+    // Sidebar comes from llms.txt, so the page list has one source: the docs' front matter.
+    function parseLlms(text) {
+      const docs = text.split(/\n## /).find(s => s.startsWith('Docs')) || '';
+      return [...docs.matchAll(/^- \[([^\]]+)\]\(([^)]+)\): (.*)$/gm)].map(m => ({
+        title: m[1], slug: m[2].split('/').pop().replace(/\.md$/, ''), description: m[3]
+      }));
+    }
+
+    function slugify(text) {
+      return text.toLowerCase().trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s/g, '-');
+    }
+
+    function route() {
+      const parts = location.hash.replace(/^#\/?/, '').split('/');
+      const slug = pages.some(p => p.slug === parts[0]) ? parts[0] : pages[0].slug;
+      return { slug, anchor: parts[1] ? decodeURIComponent(parts[1]) : null };
+    }
+
+    function stripFrontMatter(text) {
+      return text.replace(/^---\n[\s\S]*?\n---\n/, '');
+    }
+
+    function decorate(root, slug) {
+      const seen = {};
+      root.querySelectorAll('h1, h2, h3, h4').forEach(h => {
+        let id = slugify(h.textContent);
+        if (seen[id] != null) id += '-' + (++seen[id]); else seen[id] = 0;
+        h.id = id;
+      });
+      root.querySelectorAll('a[href]').forEach(a => {
+        const href = a.getAttribute('href');
+        if (/^https?:/.test(href)) { a.target = '_blank'; a.rel = 'noopener'; return; }
+        const md = href.match(/^(?:\.\/)?([\w-]+)\.md(?:#(.+))?$/);
+        if (md && pages.some(p => p.slug === md[1])) { a.href = '#/' + md[1] + (md[2] ? '/' + md[2] : ''); return; }
+        if (href.startsWith('#')) a.href = '#/' + slug + '/' + href.slice(1);
+      });
+      root.querySelectorAll('pre').forEach(pre => {
+        const wrap = document.createElement('div');
+        wrap.className = 'code';
+        pre.replaceWith(wrap);
+        wrap.appendChild(pre);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = 'Copy';
+        b.setAttribute('aria-label', 'Copy code');
+        b.addEventListener('click', () => writeClipboard(pre.innerText, b, 'Copied'));
+        wrap.appendChild(b);
+      });
+      root.querySelectorAll('table').forEach(t => {
+        const wrap = document.createElement('div');
+        wrap.className = 'table';
+        wrap.tabIndex = 0;
+        wrap.setAttribute('role', 'region');
+        wrap.setAttribute('aria-label', 'Table');
+        t.replaceWith(wrap);
+        wrap.appendChild(t);
+      });
+    }
+
+    function writeClipboard(text, button, doneLabel) {
+      const label = button.textContent;
+      const done = () => { button.textContent = doneLabel; button.dataset.done = ''; setTimeout(() => { button.textContent = label; delete button.dataset.done; }, 1600); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text) && done());
+      } else if (fallbackCopy(text)) done();
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove();
+      return ok;
+    }
+
+    function renderToc(slug) {
+      toc.replaceChildren(...pages.map(p => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#/' + p.slug;
+        a.textContent = p.title;
+        a.title = p.description;
+        if (p.slug === slug) a.setAttribute('aria-current', 'page');
+        li.appendChild(a);
+        return li;
+      }));
+    }
+
+    function renderPager(slug) {
+      const i = pages.findIndex(p => p.slug === slug);
+      const links = [];
+      if (i > 0) links.push(pagerLink(pages[i - 1], 'Previous', 'prev'));
+      if (i < pages.length - 1) links.push(pagerLink(pages[i + 1], 'Next', 'next'));
+      pager.replaceChildren(...links);
+    }
+
+    function pagerLink(p, label, cls) {
+      const a = document.createElement('a');
+      a.className = cls;
+      a.href = '#/' + p.slug;
+      const s = document.createElement('small');
+      s.textContent = label;
+      a.append(s, p.title);
+      return a;
+    }
+
+    async function show() {
+      const { slug, anchor } = route();
+      closeMenu();
+      if (slug !== current.slug) {
+        renderToc(slug);
+        raw.href = slug + '.md';
+        try {
+          const res = await fetch(slug + '.md');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          current = { slug, text: await res.text() };
+        } catch (e) {
+          current = { slug: null, text: '' };
+          content.innerHTML = '';
+          const p = document.createElement('p');
+          p.className = 'note';
+          p.textContent = 'Could not load ' + slug + '.md (' + e.message + ').';
+          content.appendChild(p);
+          return;
+        }
+        const html = DOMPurify.sanitize(marked.parse(stripFrontMatter(current.text), { gfm: true }));
+        content.innerHTML = html;
+        decorate(content, slug);
+        renderPager(slug);
+        const page = pages.find(p => p.slug === slug);
+        document.title = page.title + ' · cuAlign Docs';
+        if (!anchor) {
+          window.scrollTo({ top: 0, behavior: "instant" });
+          const h1 = content.querySelector('h1');
+          if (h1 && !first) { h1.tabIndex = -1; h1.focus({ preventScroll: true }); }
+        }
+      }
+      if (anchor) {
+        const target = document.getElementById(anchor);
+        if (target) target.scrollIntoView();
+      } else if (!first && slug === current.slug) {
+        window.scrollTo({ top: 0, behavior: "instant" });
+      }
+      first = false;
+    }
+
+    function closeMenu() {
+      side.removeAttribute('data-open');
+      menu.setAttribute('aria-expanded', 'false');
+    }
+
+    menu.addEventListener('click', () => {
+      const open = !side.hasAttribute('data-open');
+      if (open) side.setAttribute('data-open', ''); else side.removeAttribute('data-open');
+      menu.setAttribute('aria-expanded', String(open));
+      if (open) { const a = toc.querySelector('a'); if (a) a.focus(); }
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && side.hasAttribute('data-open')) { closeMenu(); menu.focus(); } });
+    copy.addEventListener('click', () => { if (current.text) writeClipboard(current.text, copy, 'Copied'); });
+    window.addEventListener('hashchange', show);
+
+    fetch('../llms.txt').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }).then(text => {
+      pages = parseLlms(text);
+      if (!pages.length) throw new Error('no pages in llms.txt');
+      show();
+    }).catch(e => {
+      content.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = 'Could not load the page list (' + e.message + '). The Markdown files are at /docs/<page>.md.';
+      content.appendChild(p);
+    });
+  })();
+  </script>
+</body>
+</html>

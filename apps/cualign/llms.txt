@@ -1,0 +1,25 @@
+# cuAlign
+
+> Research prototype that drafts clear-aligner staging plans for the upper arch from a dentist's prescription, checks every stage with geometry rules, and exports per-stage STL files only after the dentist approves.
+
+Runs locally as a FastAPI/NVIDIA NeMo Agent Toolkit server (`uv run cualign serve`, port 8000). The rule engine, scan upload, approval and export work without an NVIDIA API key. The chat agent and MCP planning need one. Tooth numbers: FDI in prescriptions and upload names, Universal (upper 1-16) in API responses.
+
+## Docs
+
+- [Overview](https://cualign.external.kr/docs/overview.md): What cuAlign does, what it outputs, who approves, and which page to open for each task.
+- [Quickstart](https://cualign.external.kr/docs/quickstart.md): Install cuAlign, plan a sample case from the CLI or HTTP API, and run it with or without an NVIDIA API key.
+- [Scans](https://cualign.external.kr/docs/scans.md): Register a patient, upload per-tooth upper-arch STL files (FDI or Universal names), read the input check, confirm it, and fix swapped left/right numbering.
+- [Planning](https://cualign.external.kr/docs/planning.md): Change a prescription and replan, fix a plan that fails the rules, approve it and download the STL zip. Includes the constraint fields and their tooth numbering.
+- [Rules](https://cualign.external.kr/docs/rules.md): Every violation type the rule check returns, its fields and usual fix, the numeric limits from the code, and the conditions for approval.
+- [For agents](https://cualign.external.kr/docs/agents.md): Call cuAlign from another agent through its MCP server at /mcp (5 tools, bearer token) or through /chat/stream SSE, with the call order, real tool results, and what an agent must never do.
+- [HTTP API](https://cualign.external.kr/docs/api.md): Every route in server/api.py with method, body, main response fields and error codes, plus /mcp, /chat/stream and the NAT routes. Default base URL http://localhost:8000.
+- [CLI](https://cualign.external.kr/docs/cli.md): The four cualign commands (plan, serve, cases build, bench), every option, the Korean sentences `cualign plan` understands, and its refusal messages.
+- [Configuration](https://cualign.external.kr/docs/configuration.md): Every environment variable cuAlign reads (key, output folder, Guardrails, MCP token and hosts, public URL), with defaults from the code, and where data is written.
+- [Troubleshooting](https://cualign.external.kr/docs/troubleshooting.md): Error messages from cuAlign's server, CLI, MCP and chat stream, matched to cause and fix. Search this page for the exact text you got.
+- [Limits](https://cualign.external.kr/docs/limits.md): What cuAlign doesn't do (lower arch, torque, most rotations, auth, clinical validation), what's unverified, and the terms of use.
+
+## Optional
+
+- [All docs in one file](https://cualign.external.kr/llms-full.txt): every page above, concatenated in order
+- [Source code](https://github.com/dalsoop/nvidia-hackaton-2026-one/tree/main/apps/cualign-prototype): the cuAlign server, planner and tests
+- [EULA](https://cualign.external.kr/eula): terms of use for the research prototype
