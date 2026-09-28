@@ -72,20 +72,6 @@
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // Hero prompt: type the prescription once, like a prompt field being filled.
-  const heroType = document.querySelector('[data-hero-type]');
-  if (heroType && !reduceMotion) {
-    const full = heroType.textContent;
-    heroType.textContent = '';
-    (async () => {
-      await wait(700);
-      for (let i = 1; i <= full.length; i++) {
-        heroType.textContent = full.slice(0, i);
-        await wait(38 + Math.random() * 40);
-      }
-    })();
-  }
-
   // Agent demo: messages appear in order, user lines are typed, tool rows tick one by one,
   // and the capture beside the chat follows the step. Plays once when scrolled into view; Replay restarts it.
   const demo = document.querySelector('[data-demo]');
