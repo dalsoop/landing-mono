@@ -1,6 +1,6 @@
 # router
 
-Cloudflare Worker `landing-mono`의 코드다. 배포 워크플로가 `router/worker.js`를 Worker의 `main`으로 지정하고, 번들 설정 없이 ES 모듈 그대로 올린다.
+Cloudflare Worker `landing-mono`의 코드다. 배포 워크플로가 `router/worker.js`를 Worker의 `main`으로 지정하고, 번들 설정 파일 없이 wrangler 기본 번들로 올린다.
 
 ## 맡는 일
 
@@ -48,4 +48,5 @@ Cloudflare Worker `landing-mono`의 코드다. 배포 워크플로가 `router/wo
    - 이메일 형식 오류와 허용 값 밖의 `role` → 400 `invalid_fields`와 필드별 코드
    - form-urlencoded 제출 → 303, `Location`이 폼의 `redirect`
    - `GET /_forms/<사이트>.json` → 404 (설정이 새지 않음)
+   - `FORMS` 바인딩을 뺀 `env`로 올바른 제출 → 503 `storage_unavailable`
 3. 변경 경계: 3xx 응답에 `Location`이 없을 때, `Location`이 다른 사이트 경로일 때(그대로 둔다), 사이트 `404.html`이 없을 때(평문 `Not Found`), `FORMS` 바인딩이 없을 때(503).

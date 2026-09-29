@@ -11,7 +11,7 @@
 
 ## Worker 코드
 
-- `router/`의 코드는 Cloudflare Workers 런타임의 표준 API(`Request`, `Response`, `URL`, `crypto.randomUUID`)만 쓴다. npm 의존성, 번들러, TypeScript를 들이지 않는다. 워크플로는 `router/worker.js`를 번들 설정 없이 `main`으로 지정한다.
+- `router/`의 코드는 Cloudflare Workers 런타임의 표준 API(`Request`, `Response`, `URL`, `crypto.randomUUID`)만 쓴다. npm 의존성, 번들러, TypeScript를 들이지 않는다. 워크플로는 `router/worker.js`를 번들 설정 파일 없이 `main`으로 지정하고, wrangler 기본 번들이 `forms.js`를 함께 묶는다.
 - 사이트별 차이는 코드 분기가 아니라 사이트 폴더의 파일(`forms.json`, `404.html`)로 표현한다. `worker.js`나 `forms.js`에 특정 사이트 이름을 넣지 않는다.
 - 양식 오류 응답의 `error` 값(`unknown_form`, `method_not_allowed`, `forbidden_origin`, `too_large`, `unsupported_type`, `bad_body`, `invalid_fields`, `storage_unavailable`)과 필드 오류 값(`required`, `too_long`, `invalid_email`, `invalid_option`)은 사이트의 요청 페이지 스크립트가 해석한다. 이름을 바꾸거나 지우면 같은 변경에서 모든 사이트의 요청 페이지를 고친다.
 - 루트 도메인 `external.kr`은 `router/worker.js`의 `ROOT_DOMAIN`과 워크플로의 `env.ROOT_DOMAIN` 두 곳에 있다. 하나만 바꾸면 라우트와 호스트 판별이 어긋나 모든 사이트가 404가 된다.
@@ -20,7 +20,7 @@
 ## 사이트 내용 (cualign)
 
 - `eula.html`의 약관 문구를 바꾸면 같은 변경에서 `app.js`의 `EULA_VERSION`과 `eula.html`의 "Version" 표기를 같은 새 날짜로 올린다.
-- `docs/*.md`를 고치거나 더하면 `apps/cualign/docs/README.md`의 생성 명령으로 `llms.txt`, `llms-full.txt`를 다시 만들어 같은 커밋에 넣는다. 두 파일을 손으로 고치지 않는다.
+- `apps/cualign/docs/*.md`를 고치거나 더하면 `apps/cualign/docs/README.md`의 생성 명령으로 `llms.txt`, `llms-full.txt`를 다시 만들어 같은 커밋에 넣는다. 두 파일을 손으로 고치지 않는다.
 - 요청 페이지 입력의 `maxlength`, `required`, `<option>` 값은 `forms.json`의 `max_length`, `required`, `options`와 같아야 한다. 서버가 거절하는 값을 브라우저가 통과시키면 제출이 400이 된다.
 - 페이지 경로를 더하거나 바꾸면 `sitemap.xml`을 고친다.
 - 단계 캡처(`assets/stages/000001-*.webp`)를 바꾸면 `index.html`의 슬라이더 `max`와 `app.js`의 충돌 표시 범위(6~12단계)를 새 캡처에 맞춘다.
@@ -98,6 +98,11 @@ const cases = [
   ["invalid fields", post({ ...ok, email: "x", role: "Boss" }), 400],
   ["too large", post(JSON.stringify({ message: "a".repeat(17000) })), 413],
   ["unknown form", worker.fetch(new Request(H + "/_forms/nope", { method: "POST", headers: { origin: H } }), env), 404],
+  ["get form 405", worker.fetch(new Request(H + "/_forms/demo-request"), env), 405],
+  ["text/plain 415", worker.fetch(new Request(H + "/_forms/demo-request", { method: "POST",
+    headers: { "content-type": "text/plain", accept: "application/json", origin: H }, body: "x" }), env), 415],
+  ["no storage 503", worker.fetch(new Request(H + "/_forms/demo-request", { method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json", origin: H }, body: JSON.stringify(ok) }), { ASSETS: env.ASSETS }), 503],
   ["forms.json hidden", worker.fetch(new Request(H + "/_forms/cualign.json"), env), 404],
   ["plain form 303", worker.fetch(new Request(H + "/_forms/demo-request", { method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", origin: H }, body: new URLSearchParams(ok).toString() }), env), 303,

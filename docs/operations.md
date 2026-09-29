@@ -21,78 +21,12 @@ python3 -m http.server 8080   # 또는 npx --yes serve -l 8080 .
 # http://localhost:8080/ , /request/ , /docs/
 ```
 
-로컬 정적 서버에는 Worker가 없으므로 `/eula`처럼 확장자 없는 경로, 사이트 `404.html`, `POST /_forms/…`는 운영과 다르게 동작한다. 양식은 로컬에서 제출하지 말고 아래 스모크 테스트로 확인한다.
-
-## 합치기 전 검사
-
-저장소 루트에서 실행한다. 각 명령의 종료 코드가 0이어야 한다.
-
-```sh
-( for f in router/*.js apps/*/*.js; do node --check "$f" || exit 1; done )
-( for dir in apps/*/; do
-    site=$(basename "$dir")
-    echo "$site" | grep -Eq '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$' || { echo "bad name: $site"; exit 1; }
-    [ -f "$dir/index.html" ] || { echo "no index.html: $site"; exit 1; }
-    if [ -f "$dir/forms.json" ]; then
-      jq -e 'type == "object" and (keys | all(test("^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$")))' "$dir/forms.json" >/dev/null || { echo "bad forms.json: $site"; exit 1; }
-    fi
-  done )
-```
-
-`apps/cualign/docs/*.md`를 고쳤다면 `apps/cualign/`에서 `apps/cualign/docs/README.md`의 두 `node -e` 명령(llms 생성, 상대 링크 확인)을 차례로 실행하고, 생성된 `llms.txt`, `llms-full.txt`를 같은 커밋에 넣는다. `router/`를 고쳤다면 Worker를 가짜 `ASSETS`, `FORMS` 바인딩으로 불러 상태 코드를 확인하는 스모크 테스트도 저장소 루트에서 돌린다. 모든 줄이 `ok`이고 종료 코드가 0이어야 한다.
-
-```sh
-node --input-type=module -e '
-import worker from "./router/worker.js";
-import fs from "node:fs";
-const forms = fs.readFileSync("apps/cualign/forms.json", "utf8");
-const puts = [];
-const env = {
-  ASSETS: { fetch: async (req) => {
-    const p = new URL(req.url).pathname;
-    if (p === "/_forms/cualign.json") return new Response(forms);
-    if (p === "/cualign/eula.html") return new Response(null, { status: 307, headers: { location: "/cualign/eula" } });
-    if (p === "/cualign/404") return new Response("not found page");
-    return new Response("", { status: 404 });
-  } },
-  FORMS: { put: async (key, value) => { puts.push([key, JSON.parse(value)]); } },
-};
-const H = "https://cualign.external.kr";
-const ok = { name: "A", email: "a@b.co", organization: "O", role: "Researcher", ack_research: "yes", ack_contact: "yes" };
-const post = (body, headers = {}) => worker.fetch(new Request(H + "/_forms/demo-request", { method: "POST",
-  headers: { "content-type": "application/json", accept: "application/json", origin: H, ...headers },
-  body: typeof body === "string" ? body : JSON.stringify(body) }), env);
-const cases = [
-  ["redirect prefix", worker.fetch(new Request(H + "/eula.html"), env), 307, (r) => r.headers.get("location") === "/eula"],
-  ["site 404 page", worker.fetch(new Request(H + "/nope"), env), 404],
-  ["unknown host", worker.fetch(new Request("https://example.com/"), env), 404],
-  ["valid json", post(ok), 200],
-  ["honeypot", post({ ...ok, website: "x" }), 200],
-  ["other origin", post(ok, { origin: "https://evil.example" }), 403],
-  ["invalid fields", post({ ...ok, email: "x", role: "Boss" }), 400],
-  ["too large", post(JSON.stringify({ message: "a".repeat(17000) })), 413],
-  ["unknown form", worker.fetch(new Request(H + "/_forms/nope", { method: "POST", headers: { origin: H } }), env), 404],
-  ["forms.json hidden", worker.fetch(new Request(H + "/_forms/cualign.json"), env), 404],
-  ["plain form 303", worker.fetch(new Request(H + "/_forms/demo-request", { method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", origin: H }, body: new URLSearchParams(ok).toString() }), env), 303,
-    (r) => r.headers.get("location") === "/request/thanks"],
-];
-let bad = 0;
-for (const [name, pending, status, extra] of cases) {
-  const r = await pending;
-  const pass = r.status === status && (!extra || extra(r));
-  if (!pass) bad++;
-  console.log(pass ? "ok  " : "FAIL", name, r.status);
-}
-if (puts.length !== 2 || puts.some(([k, v]) => !k.startsWith("cualign/demo-request/") || "ip" in v)) { bad++; console.log("FAIL stored records", puts.length); }
-process.exit(bad ? 1 : 0);
-'
-```
+로컬 정적 서버에는 Worker가 없으므로 `/eula`처럼 확장자 없는 경로, 사이트 `404.html`, `POST /_forms/…`는 운영과 다르게 동작한다. 양식 동작은 로컬 정적 서버로 제출해 보지 말고, 가짜 `ASSETS`·`FORMS` 바인딩으로 Worker를 직접 부르는 스모크 테스트로 확인한다.
 
 ## 배포
 
 1. 브랜치에서 커밋하고 GitHub PR을 만든다.
-2. 합치기 전 검사를 통과시킨 뒤 PR을 `main`에 합친다.
+2. 저장소 루트에서 합치기 전 로컬 검사(문법, 사이트 이름·`index.html`·`forms.json` 형식, cualign 문서 링크와 llms 재생성, `router/`를 고쳤다면 Worker 스모크 테스트)를 모두 통과시킨 뒤 PR을 `main`에 합친다.
 3. `apps/**`, `router/**`, `.github/workflows/deploy.yml`이 바뀌었으면 `deploy` 워크플로가 자동으로 돈다. 보통 20~30초 걸린다.
 4. 확인한다.
 
