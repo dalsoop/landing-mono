@@ -6,11 +6,12 @@
 
 | 요청 | 응답 |
 |---|---|
-| `GET https://<사이트>.external.kr/<경로>`, 파일이 있음 | 200, `apps/<사이트>/<경로>` 파일 |
+| `GET https://<사이트>.ranode.usercontent.kr/<경로>`, 파일이 있음 | 200, `apps/<사이트>/<경로>` 파일 |
 | `GET …/<이름>.html` | 307, `Location: /<이름>` (확장자 없는 경로가 정식 주소) |
 | `GET …/<폴더>` (끝 슬래시 없음) | 307, `Location: /<폴더>/` |
 | `GET …/<없는 경로>` | 404, 본문은 그 사이트의 `404.html`. 없으면 `text/plain` `Not Found` |
-| 라우트가 붙지 않은 `*.external.kr` 호스트 | 이 Worker가 응답하지 않는다(2026-09-30 기준 Cloudflare 523) |
+| `https://<사이트>.external.kr/<경로>?<질의>` (2026-12-10 까지) | 301, `Location: https://<사이트>.ranode.usercontent.kr/<경로>?<질의>`. POST 도 301 이다(아래 "옛 주소에 열린 탭") |
+| 사용자 도메인이 붙지 않은 `*.ranode.usercontent.kr` 호스트 | 이 Worker가 응답하지 않는다 |
 
 정적 자산이 만든 리다이렉트의 `Location`이 `/<사이트>` 접두어로 시작하면 Worker가 그 접두어를 떼어 사이트 루트 기준 경로로 바꾸고, 쿼리와 해시는 유지한다. 접두어로 시작하지 않는 `Location`은 바꾸지 않고 그대로 보낸다.
 
@@ -30,7 +31,7 @@ cualign 사이트가 공개하는 기계용 진입점은 다음과 같다.
 
 ### 요청
 
-- 헤더 `Origin`: 반드시 `https://<사이트>.external.kr`. 브라우저가 같은 사이트 페이지에서 보내면 자동으로 붙는다.
+- 헤더 `Origin`: 반드시 `https://<사이트>.ranode.usercontent.kr`. 브라우저가 같은 사이트 페이지에서 보내면 자동으로 붙는다.
 - 본문: `application/json`(값이 문자열·숫자·불리언·null인 평평한 객체) 또는 `application/x-www-form-urlencoded`. 최대 16KB.
 - 헤더 `Accept`에 `application/json`이 들어 있으면 JSON 응답, 없으면 브라우저용 응답(리다이렉트나 HTML)을 받는다.
 - JSON 본문의 `true`는 `"yes"`로 바뀐다. 체크박스 필드는 `"yes"` 문자열이나 `true`로 보낸다.
@@ -39,8 +40,8 @@ cualign `demo-request` 요청 예:
 
 ```http
 POST /_forms/demo-request HTTP/1.1
-Host: cualign.external.kr
-Origin: https://cualign.external.kr
+Host: cualign.ranode.usercontent.kr
+Origin: https://cualign.ranode.usercontent.kr
 Content-Type: application/json
 Accept: application/json
 
@@ -83,3 +84,7 @@ R2 쓰기 자체가 실패하면 Worker 예외로 Cloudflare 기본 5xx 응답�
 ### 멱등성
 
 같은 내용을 두 번 보내면 기록이 두 건 저장된다. 재시도해도 안전한 키나 중복 제거는 없으므로, 클라이언트는 200을 받은 뒤 다시 보내지 않는다.
+
+### 옛 주소에 열린 탭 (2026-11-10 ~ 2026-12-10)
+
+양식을 보내는 곳은 새 주소의 요청 페이지(`https://<사이트>.ranode.usercontent.kr/request/`)뿐이다. 옛 주소로 들어오면 페이지 자체가 새 주소로 301 이므로 새로 연 페이지는 모두 새 origin 에서 보낸다. 다만 이전 전에 옛 주소(`https://<사이트>.external.kr`)로 열어 둔 탭에서 제출하면 그 POST 는 301 을 받고 브라우저가 GET 으로 바꿔 따라가 405 `method_not_allowed` 가 된다(308 로 POST 를 살려도 `Origin` 이 옛 origin 이라 403 이다). 그 제출 한 건은 저장되지 않고, 방문자는 오류를 본 뒤 페이지를 다시 열어(새 주소) 다시 보내야 한다. 넘겨주기 기간에만 생기는 일이라 따로 막지 않는다.

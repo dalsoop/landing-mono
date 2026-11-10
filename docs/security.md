@@ -9,15 +9,24 @@
 | 배포 자격 증명 | GitHub 저장소 시크릿 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | 배포 워크플로만 쓴다 |
 | 호스팅 프로토타입 접속 정보 | 이 저장소 밖(Basic 인증) | 운영자가 데모 요청을 검토한 뒤 메일로 보낸다 |
 
-사이트 폴더(`apps/<사이트>/`)의 파일은 `forms.json`을 빼고 모두 공개 자산이다. `README.md`나 `docs/README.md` 같은 작업용 문서도 `https://<사이트>.external.kr/README.md`처럼 그대로 열린다. 저장소도 GitHub 공개 저장소다.
+사이트 폴더(`apps/<사이트>/`)의 파일은 `forms.json`을 빼고 모두 공개 자산이다. `README.md`나 `docs/README.md` 같은 작업용 문서도 `https://<사이트>.ranode.usercontent.kr/README.md`처럼 그대로 열린다. 저장소도 GitHub 공개 저장소다.
 
 ## 인증과 접근
 
 - 사이트 페이지와 양식 엔드포인트에는 인증이 없다. 누구나 읽고 누구나 제출할 수 있다.
-- 양식 제출은 같은 사이트 페이지에서 보낸 것만 받는다. 요청의 `Origin`이 `https://<사이트>.external.kr`과 정확히 같아야 하고, 다르거나 없으면 403 `forbidden_origin`으로 거절하며 저장하지 않는다. 이 검사는 다른 사이트에서 브라우저를 통해 대신 제출시키는 것을 막는 장치이고, `Origin` 헤더를 직접 만들 수 있는 스크립트는 막지 못한다.
+- 양식 제출은 같은 사이트 페이지에서 보낸 것만 받는다. 요청의 `Origin`이 `https://<사이트>.ranode.usercontent.kr`과 정확히 같아야 하고, 다르거나 없으면 403 `forbidden_origin`으로 거절하며 저장하지 않는다. 이 검사는 다른 사이트에서 브라우저를 통해 대신 제출시키는 것을 막는 장치이고, `Origin` 헤더를 직접 만들 수 있는 스크립트는 막지 못한다.
 - 한 사이트의 호스트에서는 자기 폴더의 자산과 자기 `forms.json`의 폼만 쓸 수 있다. 다른 사이트의 폼 이름으로 제출하면 404다.
 - 스팸 방어는 숨긴 허니팟 필드 `website` 하나다. 값이 채워지면 저장하지 않고 성공으로 응답해 봇이 실패를 알아채지 못하게 한다. 속도 제한, CAPTCHA, 중복 차단은 없다.
 - 크기 제한: 본문 16KB, 필드별 기본 2000자. 허용하지 않은 필드는 버리므로 임의의 키로 저장 공간을 늘릴 수 없다.
+
+## 같은 등록 도메인의 올린 내용 (usercontent.kr)
+
+사이트는 사용자·에이전트가 올린 페이지를 두는 `usercontent.kr` 의 `ranode.` 아래에 있다(결정 0004, host-infra 결정 0014). `usercontent.kr` 은 Public Suffix List 에 없어 브라우저에게 올린 페이지(`<토큰>.usercontent.kr`)와 같은 사이트(same-site)다.
+
+- 올린 HTML 은 `Domain=usercontent.kr` 쿠키를 심을 수 있다. 사이트와 Worker 는 쿠키를 읽지도 만들지도 않는다. Worker 는 응답의 `Set-Cookie` 를 지운다. 쿠키가 필요해지면 `__Host-` 쿠키만 쓰고, 그 전에 결정 0004 를 바꾼다.
+- 올린 HTML 이 보내는 양식 제출은 `Origin` 이 달라 403 이다. SameSite 쿠키에 기대지 않는다.
+- 모든 응답에 `Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` 이 붙는다. 스크립트 출처는 제한하지 않는다(cdnjs·Google Fonts·인라인 스크립트를 쓴다).
+- TLS·HSTS 는 usercontent.kr 영역 설정(최소 TLS 1.2, 항상 HTTPS, HSTS 86400 초, 하위 도메인 미포함)을 따른다.
 
 ## 민감 정보 처리
 
@@ -30,7 +39,7 @@
 
 ## 자격 증명
 
-- `CLOUDFLARE_API_TOKEN`(배포용): 계정 권한 `Workers Scripts: Edit`과 external.kr zone 권한 `Workers Routes: Edit`을 가진 토큰이다. Pages 권한은 없다. GitHub 저장소 시크릿으로만 두고, 워크플로 로그나 파일에 출력하지 않는다. 토큰을 바꿀 때는 저장소 시크릿만 갈면 되고 코드나 워크플로는 고치지 않는다. 만료일과 회전 주기는 저장소에 기록되어 있지 않다.
+- `CLOUDFLARE_API_TOKEN`(배포용): Worker 를 올리고 usercontent.kr 사용자 도메인과 external.kr 라우트(2026-12-10 까지)를 붙일 수 있는 토큰이다. Pages 권한은 없다. GitHub 저장소 시크릿으로만 두고, 워크플로 로그나 파일에 출력하지 않는다. 토큰을 바꿀 때는 저장소 시크릿만 갈면 되고 코드나 워크플로는 고치지 않는다. 만료일과 회전 주기는 저장소에 기록되어 있지 않다.
 - 기록 조회용 토큰(README의 `CF_API_TOKEN`): R2 읽기 권한이 필요하고, 삭제까지 하려면 쓰기 권한도 필요하다. 운영자의 셸 환경 변수로만 쓰고 저장소에 두지 않는다.
 - 호스팅 프로토타입 접속 정보는 요청자별로 메일로 보낸다. 페이지, `app.js`, 커밋에 넣지 않는다.
 
@@ -42,4 +51,4 @@
 
 ## 외부 스크립트
 
-페이지는 cdnjs의 three.js 0.160.0, marked 12.0.2, DOMPurify 3.1.6과 Google Fonts를 받는다. 버전은 URL에 고정되어 있지만 SRI(`integrity`) 속성은 없고, Content-Security-Policy도 두지 않았다.
+페이지는 cdnjs의 three.js 0.160.0, marked 12.0.2, DOMPurify 3.1.6과 Google Fonts를 받는다. 버전은 URL에 고정되어 있지만 SRI(`integrity`) 속성은 없다. Worker 가 붙이는 Content-Security-Policy(위 "같은 등록 도메인의 올린 내용" 절)는 틀 넣기·`<base>`·플러그인·양식 대상만 막고 스크립트·스타일 출처(`script-src`·`style-src`)는 제한하지 않는다.

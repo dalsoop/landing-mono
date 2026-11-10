@@ -14,7 +14,8 @@
 - `router/`의 코드는 Cloudflare Workers 런타임의 표준 API(`Request`, `Response`, `URL`, `crypto.randomUUID`)만 쓴다. npm 의존성, 번들러, TypeScript를 들이지 않는다. 워크플로는 `router/worker.js`를 번들 설정 파일 없이 `main`으로 지정하고, wrangler 기본 번들이 `forms.js`를 함께 묶는다.
 - 사이트별 차이는 코드 분기가 아니라 사이트 폴더의 파일(`forms.json`, `404.html`)로 표현한다. `worker.js`나 `forms.js`에 특정 사이트 이름을 넣지 않는다.
 - 양식 오류 응답의 `error` 값(`unknown_form`, `method_not_allowed`, `forbidden_origin`, `too_large`, `unsupported_type`, `bad_body`, `invalid_fields`, `storage_unavailable`)과 필드 오류 값(`required`, `too_long`, `invalid_email`, `invalid_option`)은 사이트의 요청 페이지 스크립트가 해석한다. 이름을 바꾸거나 지우면 같은 변경에서 모든 사이트의 요청 페이지를 고친다.
-- 루트 도메인 `external.kr`은 `router/worker.js`의 `ROOT_DOMAIN`과 워크플로의 `env.ROOT_DOMAIN` 두 곳에 있다. 하나만 바꾸면 라우트와 호스트 판별이 어긋나 모든 사이트가 404가 된다.
+- 루트 도메인 `ranode.usercontent.kr`은 `router/worker.js`의 `ROOT_DOMAIN`과 워크플로의 `env.ROOT_DOMAIN` 두 곳에 있다. 하나만 바꾸면 라우트와 호스트 판별이 어긋나 모든 사이트가 404가 된다. 옛 루트 도메인 `external.kr`(301 넘겨주기 전용, 2026-12-10 까지)도 `LEGACY_ROOT_DOMAIN` 으로 같은 두 곳에 있다(결정 0004).
+- Worker 는 모든 응답에 `SECURITY_HEADERS`(CSP `frame-ancestors 'none'` 등)를 붙이고 `Set-Cookie` 를 지운다. 사이트가 쿠키를 쓰지 않는 것은 `usercontent.kr` 에 있는 조건이다(결정 0004). 쿠키가 필요해지면 이 규칙과 결정을 먼저 바꾼다.
 - 사이트 이름 정규식은 워크플로와 `worker.js`의 `SITE_LABEL`에, 폼 이름 정규식은 워크플로와 `forms.js`의 `FORM_NAME`에 같은 값으로 있어야 한다.
 
 ## 사이트 내용 (cualign)
@@ -78,20 +79,25 @@ const env = {
     const p = new URL(req.url).pathname;
     if (p === "/_forms/cualign.json") return new Response(forms);
     if (p === "/cualign/eula.html") return new Response(null, { status: 307, headers: { location: "/cualign/eula" } });
-    if (p === "/cualign/404") return new Response("not found page");
+    if (p === "/cualign/404") return new Response("not found page", { headers: { "set-cookie": "x=1" } });
     return new Response("", { status: 404 });
   } },
   FORMS: { put: async (key, value) => { puts.push([key, JSON.parse(value)]); } },
 };
-const H = "https://cualign.external.kr";
+const H = "https://cualign.ranode.usercontent.kr";
 const ok = { name: "A", email: "a@b.co", organization: "O", role: "Researcher", ack_research: "yes", ack_contact: "yes" };
 const post = (body, headers = {}) => worker.fetch(new Request(H + "/_forms/demo-request", { method: "POST",
   headers: { "content-type": "application/json", accept: "application/json", origin: H, ...headers },
   body: typeof body === "string" ? body : JSON.stringify(body) }), env);
 const cases = [
   ["redirect prefix", worker.fetch(new Request(H + "/eula.html"), env), 307, (r) => r.headers.get("location") === "/eula"],
-  ["site 404 page", worker.fetch(new Request(H + "/nope"), env), 404],
+  ["site 404 page", worker.fetch(new Request(H + "/nope"), env), 404, (r) => !r.headers.has("set-cookie")],
   ["unknown host", worker.fetch(new Request("https://example.com/"), env), 404],
+  ["legacy host 301", worker.fetch(new Request("https://cualign.external.kr/request/?a=1"), env), 301,
+    (r) => r.headers.get("location") === H + "/request/?a=1"],
+  ["upload host 404", worker.fetch(new Request("https://abc.usercontent.kr/"), env), 404],
+  ["security headers", worker.fetch(new Request(H + "/nope"), env), 404,
+    (r) => r.headers.get("x-frame-options") === "DENY" && (r.headers.get("content-security-policy") || "").includes("frame-ancestors \x27none\x27")],
   ["valid json", post(ok), 200],
   ["honeypot", post({ ...ok, website: "x" }), 200],
   ["other origin", post(ok, { origin: "https://evil.example" }), 403],
