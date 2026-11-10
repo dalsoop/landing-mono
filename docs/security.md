@@ -51,4 +51,4 @@
 
 ## 외부 스크립트
 
-페이지는 cdnjs의 three.js 0.160.0, marked 12.0.2, DOMPurify 3.1.6과 Google Fonts를 받는다. 버전은 URL에 고정되어 있지만 SRI(`integrity`) 속성은 없고, Content-Security-Policy도 두지 않았다.
+페이지는 cdnjs의 three.js 0.160.0, marked 12.0.2, DOMPurify 3.1.6과 Google Fonts를 받는다. 버전은 URL에 고정되어 있지만 SRI(`integrity`) 속성은 없다. Worker 가 붙이는 Content-Security-Policy(위 "같은 등록 도메인의 올린 내용" 절)는 틀 넣기·`<base>`·플러그인·양식 대상만 막고 스크립트·스타일 출처(`script-src`·`style-src`)는 제한하지 않는다.
