@@ -6,11 +6,12 @@
 
 | 요청 | 응답 |
 |---|---|
-| `GET https://<사이트>.external.kr/<경로>`, 파일이 있음 | 200, `apps/<사이트>/<경로>` 파일 |
+| `GET https://<사이트>.ranode.usercontent.kr/<경로>`, 파일이 있음 | 200, `apps/<사이트>/<경로>` 파일 |
 | `GET …/<이름>.html` | 307, `Location: /<이름>` (확장자 없는 경로가 정식 주소) |
 | `GET …/<폴더>` (끝 슬래시 없음) | 307, `Location: /<폴더>/` |
 | `GET …/<없는 경로>` | 404, 본문은 그 사이트의 `404.html`. 없으면 `text/plain` `Not Found` |
-| 라우트가 붙지 않은 `*.external.kr` 호스트 | 이 Worker가 응답하지 않는다(2026-09-30 기준 Cloudflare 523) |
+| `https://<사이트>.external.kr/<경로>?<질의>` (2026-12-10 까지) | 301, `Location: https://<사이트>.ranode.usercontent.kr/<경로>?<질의>`. POST 도 301 이다 |
+| 사용자 도메인이 붙지 않은 `*.ranode.usercontent.kr` 호스트 | 이 Worker가 응답하지 않는다 |
 
 정적 자산이 만든 리다이렉트의 `Location`이 `/<사이트>` 접두어로 시작하면 Worker가 그 접두어를 떼어 사이트 루트 기준 경로로 바꾸고, 쿼리와 해시는 유지한다. 접두어로 시작하지 않는 `Location`은 바꾸지 않고 그대로 보낸다.
 
@@ -30,7 +31,7 @@ cualign 사이트가 공개하는 기계용 진입점은 다음과 같다.
 
 ### 요청
 
-- 헤더 `Origin`: 반드시 `https://<사이트>.external.kr`. 브라우저가 같은 사이트 페이지에서 보내면 자동으로 붙는다.
+- 헤더 `Origin`: 반드시 `https://<사이트>.ranode.usercontent.kr`. 브라우저가 같은 사이트 페이지에서 보내면 자동으로 붙는다.
 - 본문: `application/json`(값이 문자열·숫자·불리언·null인 평평한 객체) 또는 `application/x-www-form-urlencoded`. 최대 16KB.
 - 헤더 `Accept`에 `application/json`이 들어 있으면 JSON 응답, 없으면 브라우저용 응답(리다이렉트나 HTML)을 받는다.
 - JSON 본문의 `true`는 `"yes"`로 바뀐다. 체크박스 필드는 `"yes"` 문자열이나 `true`로 보낸다.
@@ -39,8 +40,8 @@ cualign `demo-request` 요청 예:
 
 ```http
 POST /_forms/demo-request HTTP/1.1
-Host: cualign.external.kr
-Origin: https://cualign.external.kr
+Host: cualign.ranode.usercontent.kr
+Origin: https://cualign.ranode.usercontent.kr
 Content-Type: application/json
 Accept: application/json
 

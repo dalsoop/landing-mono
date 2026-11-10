@@ -4,7 +4,7 @@
 
 Runs locally as a FastAPI/NVIDIA NeMo Agent Toolkit server (`uv run cualign serve`, port 8000). The rule engine, scan upload, approval and export work without an NVIDIA API key. The chat agent and MCP planning need one. Tooth numbers: FDI in prescriptions and upload names, Universal (upper 1-16) in API responses.
 
-<!-- source: https://cualign.external.kr/docs/overview.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/overview.md -->
 
 ---
 title: Overview
@@ -21,7 +21,7 @@ It's a research prototype. It isn't a medical device and hasn't been clinically 
 
 The interface, prescriptions and agent replies are in Korean. English input is not supported yet.
 
-A hosted prototype runs at <https://cualign-proto.external.kr>, with access on request. You can also run it locally with the [Quickstart](quickstart.md).
+A hosted prototype is available on request. You can also run it locally with the [Quickstart](quickstart.md).
 
 ## What comes out
 
@@ -61,7 +61,7 @@ The agent never picks extraction teeth and never approves. The MCP tool `cualign
 | Decode an error message | [Troubleshooting](troubleshooting.md) |
 | Know what it can't do | [Limits](limits.md) |
 
-<!-- source: https://cualign.external.kr/docs/quickstart.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/quickstart.md -->
 
 ---
 title: Quickstart
@@ -196,7 +196,7 @@ docker run --rm -p 127.0.0.1:8000:8000 --env-file .env cualign:local
 
 Not run for these docs. The build only includes committed files. Plans and STL files live inside the container and vanish with `--rm`.
 
-<!-- source: https://cualign.external.kr/docs/scans.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/scans.md -->
 
 ---
 title: Scans
@@ -323,7 +323,7 @@ Confirming an unsupported scan returns 409 `지원하지 않는 스캔은 계획
 
 `POST /api/cases/upload` takes Universal names only (`2.stl` … `15.stl`, optional `gingiva.stl`) and returns an `upload-xxxxxxxx` case with no patient and no confirmation step. Setting `CUALIGN_CASE_DIR` to a folder of such files exposes it as case `scan`. Only the patient flow has the input check, so prefer it.
 
-<!-- source: https://cualign.external.kr/docs/planning.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/planning.md -->
 
 ---
 title: Planning
@@ -472,7 +472,7 @@ Which strategies run depends on the prescription:
 
 Tooth numbering at a glance: FDI 18–11 = Universal 1–8, FDI 21–28 = Universal 9–16. Third molars (1, 16) are never planned.
 
-<!-- source: https://cualign.external.kr/docs/rules.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/rules.md -->
 
 ---
 title: Rules
@@ -546,7 +546,7 @@ Sources the code cites for the clinical numbers: MDPI Applied Sciences 2024 stag
 
 A rule pass isn't a clinical judgement. The download checks approval again against a stored fingerprint of the plan, so a changed plan needs a new approval.
 
-<!-- source: https://cualign.external.kr/docs/agents.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/agents.md -->
 
 ---
 title: For agents
@@ -703,7 +703,7 @@ data: {"request_id": "abfa24bc15f44bf2bb384683c73533f6", "case_id": "poseidon-00
 
 A bad `cualign` object is refused before the model runs: 400 `Invalid case, parent plan or constraints`, or 400 with the extraction message when extraction is allowed without teeth. `reviewed_by_server: true` means the agent skipped the reviewer and the server ran it. `kind: "nim_overload"` and `no_answer` (`모델이 계획 대신 자기 추론문만 돌려보내 답을 만들지 못했습니다. 같은 요청을 다시 보내 주세요.`) are worth one resend. `nim_auth` needs a valid key on the server.
 
-<!-- source: https://cualign.external.kr/docs/api.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/api.md -->
 
 ---
 title: HTTP API
@@ -776,7 +776,7 @@ Plan summary fields (in `tried`, `chosen`, `GET /api/plans` and MCP): `plan_id`,
 | `GET /ui/` | The web UI (static files) | yes |
 | NAT routes | `/chat`, `/v1/chat`, `/v1/chat/stream`, `/v1/chat/completions`, `/generate`, `/generate/stream`, `/generate/full`, `/v1/workflow`, `/v1/workflow/stream`, `/v1/workflow/full`, `/v1/workflow/atif`, `/executions/...`, `/evaluate/item`, `/auth/redirect`. They run the same workflow with Guardrails, but only `/chat/stream` adds the case context and plan events | listed from `/openapi.json` |
 
-<!-- source: https://cualign.external.kr/docs/cli.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/cli.md -->
 
 ---
 title: CLI
@@ -884,7 +884,7 @@ uv run cualign serve --host 127.0.0.1 --port 8000
 
 Without `NVIDIA_API_KEY` it prints `[warn] NVIDIA_API_KEY not set — the agent will fail; /ui and the rule-based fallback still work` and starts anyway. The warning goes to stdout right before the process is replaced by NAT, so it may not show when stdout isn't a terminal. It didn't appear in our log file. See [Configuration](configuration.md) for the environment it reads.
 
-<!-- source: https://cualign.external.kr/docs/configuration.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/configuration.md -->
 
 ---
 title: Configuration
@@ -947,7 +947,7 @@ $CUALIGN_OUT/
 
 Constraints per case and the step flow live in memory only and reset on restart.
 
-<!-- source: https://cualign.external.kr/docs/troubleshooting.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/troubleshooting.md -->
 
 ---
 title: Troubleshooting
@@ -1036,7 +1036,7 @@ See the full table in [Scans](scans.md#what-gets-rejected). Also:
 | `[거부] CLI 초안은 미승인입니다. ...` | `--export` is always refused. Approve in the server and download there |
 | `AuthlibDeprecationWarning: authlib.jose module is deprecated` at start | Harmless warning from a NAT dependency |
 
-<!-- source: https://cualign.external.kr/docs/limits.md -->
+<!-- source: https://cualign.ranode.usercontent.kr/docs/limits.md -->
 
 ---
 title: Limits

@@ -12,7 +12,11 @@ concurrency:
 
 env:
   WORKER_NAME: landing-mono
-  ROOT_DOMAIN: external.kr
+  ROOT_DOMAIN: ranode.usercontent.kr
+  # Old names <site>.external.kr keep a route only so the Worker can answer 301 to the new name.
+  # Remove this line, the LEGACY_ROOT_DOMAIN block in the build step and the redirect in
+  # router/worker.js on 2026-12-10 (decision 0004).
+  LEGACY_ROOT_DOMAIN: external.kr
 
 jobs:
   deploy:
@@ -56,7 +60,12 @@ jobs:
               mkdir -p dist/_forms
               mv "dist/$site/forms.json" "dist/_forms/$site.json"
             fi
-            routes=$(echo "$routes" | jq -c --arg p "$site.$ROOT_DOMAIN/*" --arg z "$ROOT_DOMAIN" '. + [{pattern: $p, zone_name: $z}]')
+            # Custom domain: Cloudflare makes the DNS record and a certificate for the two-level name
+            # (the zone's Universal SSL only covers *.usercontent.kr).
+            routes=$(echo "$routes" | jq -c --arg p "$site.$ROOT_DOMAIN" '. + [{pattern: $p, custom_domain: true}]')
+            if [ -n "${LEGACY_ROOT_DOMAIN:-}" ]; then
+              routes=$(echo "$routes" | jq -c --arg p "$site.$LEGACY_ROOT_DOMAIN/*" --arg z "$LEGACY_ROOT_DOMAIN" '. + [{pattern: $p, zone_name: $z}]')
+            fi
             echo "사이트: https://$site.$ROOT_DOMAIN"
           done
           jq -n --arg name "$WORKER_NAME" --argjson routes "$routes" '{

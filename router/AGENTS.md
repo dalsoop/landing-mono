@@ -4,7 +4,7 @@ Cloudflare Worker `landing-mono`의 코드다. 배포 워크플로가 `router/wo
 
 ## 맡는 일
 
-- `worker.js`: 요청 호스트 `<사이트>.external.kr`에서 사이트 이름을 뽑아 `ASSETS`의 `/<사이트>/<경로>`를 돌려준다. 3xx 응답의 `Location`에서 `/<사이트>` 접두어를 떼고, 자산 404는 `/<사이트>/404`(사이트의 `404.html`) 본문에 상태 404를 붙여 돌려준다. 경로가 `/_forms/`로 시작하면 `forms.js`의 `handleForm`에 넘긴다.
+- `worker.js`: 옛 호스트 `<사이트>.external.kr`(`LEGACY_ROOT_DOMAIN`)은 같은 경로의 `https://<사이트>.ranode.usercontent.kr` 로 301 을 돌려준다(2026-12-10 까지). 모든 응답에 `SECURITY_HEADERS` 를 붙이고 `Set-Cookie` 를 지운다. 요청 호스트 `<사이트>.ranode.usercontent.kr`에서 사이트 이름을 뽑아 `ASSETS`의 `/<사이트>/<경로>`를 돌려준다. 3xx 응답의 `Location`에서 `/<사이트>` 접두어를 떼고, 자산 404는 `/<사이트>/404`(사이트의 `404.html`) 본문에 상태 404를 붙여 돌려준다. 경로가 `/_forms/`로 시작하면 `forms.js`의 `handleForm`에 넘긴다.
 - `forms.js`: `ASSETS`의 `/_forms/<사이트>.json`에서 폼 설정을 읽어 제출을 검증하고 R2 바인딩 `FORMS`에 `<사이트>/<폼>/<ISO시각>-<uuid>.json`으로 저장한다.
 
 ## 맡지 않는 일
@@ -15,7 +15,7 @@ Cloudflare Worker `landing-mono`의 코드다. 배포 워크플로가 `router/wo
 
 ## 불변 조건
 
-- `ROOT_DOMAIN`은 `external.kr`이고 워크플로의 `env.ROOT_DOMAIN`과 같아야 한다.
+- `ROOT_DOMAIN`은 `ranode.usercontent.kr`, `LEGACY_ROOT_DOMAIN`은 `external.kr`이고 워크플로의 `env` 같은 이름 값과 같아야 한다.
 - `SITE_LABEL`은 워크플로의 사이트 이름 정규식과, `FORM_NAME`은 워크플로의 폼 이름 정규식과 같아야 한다.
 - 서빙 경로는 항상 `/${site}${pathname}`이다. 사이트 이름을 경로 앞에 붙이지 않고 자산을 묻는 코드를 만들지 않는다. 그렇게 하면 한 사이트의 호스트로 다른 사이트의 파일이나 `/_forms/*.json` 설정을 읽을 수 있게 된다.
 - `/_forms/` 경로는 자산으로 넘기지 않는다. 이 분기가 폼 설정 파일을 브라우저에게서 숨긴다.
@@ -41,7 +41,7 @@ Cloudflare Worker `landing-mono`의 코드다. 배포 워크플로가 `router/wo
 2. 가짜 `ASSETS`(자산 응답을 흉내 내는 `fetch`)와 가짜 `FORMS`(`put`을 배열에 기록)를 만들어 `worker.fetch(new Request(…), env)`를 직접 부르는 `node --input-type=module -e` 스모크 테스트. 최소한 다음 경우의 상태 코드를 확인한다.
    - `/eula.html` → 307, `Location: /eula`
    - 없는 경로 → 404, 사이트 404 본문
-   - `external.kr`이 아닌 호스트 → 404
+   - `ranode.usercontent.kr`·`external.kr`이 아닌 호스트 → 404
    - 올바른 JSON 제출 → 200, 저장 1건, 레코드에 IP 없음
    - 허니팟이 채워진 제출 → 200, 저장 없음
    - 다른 Origin → 403, 없는 폼 → 404, GET → 405, 17KB 본문 → 413, `text/plain` → 415

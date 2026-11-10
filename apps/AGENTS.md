@@ -1,6 +1,6 @@
 # apps
 
-사이트 폴더를 모아 두는 곳이다. `apps/<사이트>/` 폴더 하나가 `https://<사이트>.external.kr` 하나이며, 빌드 없이 폴더의 파일이 그대로 공개 자산이 된다. 현재 사이트는 `cualign` 하나다.
+사이트 폴더를 모아 두는 곳이다. `apps/<사이트>/` 폴더 하나가 `https://<사이트>.ranode.usercontent.kr` 하나이며, 빌드 없이 폴더의 파일이 그대로 공개 자산이 된다. 현재 사이트는 `cualign` 하나다.
 
 ## 맡는 일
 
@@ -11,11 +11,11 @@
 
 - 호스트 라우팅, 리다이렉트, 404 처리, 양식 검증과 저장은 `router/`의 일이다. 사이트 폴더에 서버 코드(`_worker.js`, 함수 폴더)를 두어도 실행되지 않는다.
 - 배포, 라우트, DNS는 워크플로와 Cloudflare 설정의 일이다. 사이트별 설정 파일(`site.json` 등)을 만들지 않는다.
-- cuAlign 제품 코드(서버, 계획 엔진, 호스팅 프로토타입 `cualign-proto.external.kr`)는 다른 저장소(`dalsoop/nvidia-hackaton-2026-one`)에 있다. 이 폴더에서 제품 동작을 고치지 않는다.
+- cuAlign 제품 코드(서버, 계획 엔진)는 다른 저장소(`dalsoop/nvidia-hackaton-2026-one`)에 있다. 옛 호스팅 프로토타입 `cualign-proto.external.kr` 은 2026-11-08 부터 응답하는 곳이 없어 `app.js` 의 `LAUNCH_URL` 을 비우고 "Launch prototype" 버튼을 숨겼다(결정 0004). 이 폴더에서 제품 동작을 고치지 않는다.
 
 ## 사이트 폴더 공통 불변 조건
 
-- 폴더 이름은 `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`이고, 이미 다른 서비스가 쓰는 `external.kr` 서브도메인과 겹치지 않는다.
+- 폴더 이름은 `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`이고, `ranode.usercontent.kr` 에 이미 있는 이름과 겹치지 않는다.
 - `index.html`이 있다.
 - `forms.json`을 뺀 모든 파일이 공개된다. 비밀 값, 개인정보, 내부 전용 메모를 두지 않는다. 지금 있는 `README.md`도 공개되고 있다.
 - 페이지 안의 경로는 사이트 루트 기준(`/styles.css`) 또는 상대 경로다. `/<사이트>/…` 경로를 쓰지 않는다.
@@ -37,7 +37,7 @@
 ### 불변 조건
 
 - `app.js`의 `EULA_VERSION`, `eula.html`의 "Version" 표기는 같은 날짜다. 약관 문구를 바꾸면 둘을 새 날짜로 함께 올린다. 동의 저장 키 `cualign.eula`는 바꾸지 않는다(바꾸면 기존 동의가 모두 사라진 것처럼 보인다).
-- "Launch prototype"은 동의 없이 `LAUNCH_URL`로 이동하지 않는다. 두 확인란이 모두 체크되어야 동의가 저장된다.
+- "Launch prototype"은 `LAUNCH_URL`이 비어 있으면 숨고, 동의 없이 `LAUNCH_URL`로 이동하지 않는다. 두 확인란이 모두 체크되어야 동의가 저장된다.
 - `DEMO_FORM_URL`이 비어 있으면 `data-demo-request` 버튼을 숨긴다. 이 동작을 지우지 않는다.
 - 슬라이더 `max`(18)와 이미지 수(19장), `app.js`의 충돌 표시 범위(6~12단계)는 캡처 세트와 맞아야 한다.
 - 대화 데모의 `STEP_OF_MSG`, `MEDIA_OF_MSG` 배열 길이는 `.msg` 개수(5)와 같아야 한다.

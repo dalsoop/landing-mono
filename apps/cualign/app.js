@@ -3,7 +3,9 @@
 
   const EULA_VERSION = '2026-09-28';
   const CONSENT_KEY = 'cualign.eula';
-  const LAUNCH_URL = 'https://cualign-proto.external.kr/';   // hosted prototype, behind Basic auth
+  // Hosted prototype; the "Launch prototype" buttons are hidden while this is empty. Nothing serves
+  // the old cualign-proto.external.kr since 2026-11-08 (decision 0004).
+  const LAUNCH_URL = '';
   const DEMO_FORM_URL = '/request/';   // demo request form; the buttons are hidden while this is empty
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -13,6 +15,11 @@
     if (DEMO_FORM_URL) a.href = DEMO_FORM_URL;
     else a.hidden = true;
   });
+
+  // Launch buttons and their "Access required" note: shown only while a prototype URL is set.
+  if (!LAUNCH_URL) {
+    document.querySelectorAll('[data-launch], .access-note').forEach((el) => { el.hidden = true; });
+  }
 
   // Nav: border once scrolled, mobile menu toggle.
   const nav = document.querySelector('[data-nav]');

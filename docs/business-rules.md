@@ -5,13 +5,13 @@
 - **사이트**: `apps/` 바로 아래 폴더 하나. 폴더 이름이 곧 사이트 이름이고 서브도메인이다.
 - **폼**: 사이트가 받는 양식 하나. 사이트의 `forms.json`에서 키 하나가 폼 하나다. 같은 폼 이름이라도 사이트가 다르면 다른 폼이다.
 - **제출 기록**: 저장에 성공한 양식 제출 한 건. R2 객체 하나다.
-- **cuAlign**과 **cualign**: cuAlign은 소개하는 제품(치과 투명 교정 단계 계획 연구용 프로토타입)이고, cualign은 이 저장소의 사이트 폴더 이름이다. 제품의 호스팅 프로토타입은 `cualign-proto.external.kr`로 따로 있다.
+- **cuAlign**과 **cualign**: cuAlign은 소개하는 제품(치과 투명 교정 단계 계획 연구용 프로토타입)이고, cualign은 이 저장소의 사이트 폴더 이름이다. 제품의 옛 호스팅 프로토타입 `cualign-proto.external.kr`은 2026-11-08 부터 응답하지 않는다.
 
 ## 사이트와 도메인
 
 - 사이트 이름은 정규식 `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`를 만족해야 한다. 대문자, 밑줄, 점, 앞뒤 하이픈, 64자 이상은 배포 실패다.
 - 사이트 폴더에는 `index.html`이 있어야 한다. 없으면 배포 실패다.
-- 사이트 `<이름>`은 `https://<이름>.external.kr`에서만 열린다. `external.kr`이 아닌 호스트나 규칙에 맞지 않는 라벨은 평문 404를 받는다.
+- 사이트 `<이름>`은 `https://<이름>.ranode.usercontent.kr`에서만 열린다. 옛 `https://<이름>.external.kr`은 2026-12-10 까지 같은 경로의 새 주소로 301 이다. 그 밖의 호스트나 규칙에 맞지 않는 라벨은 평문 404를 받는다.
 - 사이트 안의 경로 `/x`는 `apps/<이름>/x` 파일이다. `a.html`은 `/a`로 307 리다이렉트되고, 폴더 경로 `/docs`는 `/docs/`로 리다이렉트된다.
 - 없는 경로는 그 사이트의 `404.html` 내용을 상태 404로 받는다. `404.html`이 없는 사이트는 평문 `Not Found`를 받는다.
 - 이미 다른 서비스가 쓰는 서브도메인 이름(`cualign-proto`, `immich`, `cdn`, `postiz` 등)은 사이트 이름으로 쓰지 않는다. 그 이름으로 폴더를 만들면 기존 서비스와 사이트 중 한쪽이 열리지 않는다.
@@ -34,7 +34,7 @@
 
 1. 폼 이름이 규칙에 맞지 않거나 사이트의 `forms.json`에 없으면 404 `unknown_form`이다.
 2. POST가 아니면 405 `method_not_allowed`다.
-3. `Origin` 헤더가 요청 URL의 origin(`https://<사이트>.external.kr`)과 정확히 같지 않으면 403 `forbidden_origin`이다. `Origin`이 없어도 403이다.
+3. `Origin` 헤더가 요청 URL의 origin(`https://<사이트>.ranode.usercontent.kr`)과 정확히 같지 않으면 403 `forbidden_origin`이다. `Origin`이 없어도 403이다.
 4. 선언된 길이나 실제 본문이 16KB(16384바이트)를 넘으면 413 `too_large`다.
 5. 본문 형식이 `application/json`도 `application/x-www-form-urlencoded`도 아니면 415 `unsupported_type`이다. JSON이 깨졌거나 객체가 아니거나 값이 문자열·숫자·불리언·null이 아니면 400 `bad_body`다.
 6. JSON 값 변환: `true`는 `"yes"`, `false`와 `null`은 없는 값, 숫자는 문자열이 된다.
@@ -61,7 +61,7 @@
 
 ### 프로토타입 실행 전 동의
 
-- "Launch prototype" 버튼은 EULA 동의가 있어야 `https://cualign-proto.external.kr/`로 이동한다.
+- "Launch prototype" 버튼은 `LAUNCH_URL`이 있을 때만 보이고, EULA 동의가 있어야 그 주소로 이동한다. 지금은 비어 있어 숨어 있다.
 - 동의 창의 두 확인란(연구·시연 용도로만 쓴다, 식별 가능한 환자 데이터를 올리지 않는다)이 모두 체크되어야 "Agree & continue"가 켜진다.
 - 동의는 브라우저 `localStorage`의 `cualign.eula`에 `{version, acceptedAt}`으로 남는다. 저장된 `version`이 `app.js`의 `EULA_VERSION`과 같으면 다시 묻지 않고 바로 이동한다. 다르거나 없거나 저장소를 쓸 수 없으면 매번 다시 묻는다.
 - EULA 문구를 바꾸면 버전을 올려 모든 방문자에게 다시 동의를 받는다. 현재 버전은 `2026-09-28`이다.

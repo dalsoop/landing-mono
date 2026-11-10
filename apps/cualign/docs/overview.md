@@ -13,7 +13,7 @@ It's a research prototype. It isn't a medical device and hasn't been clinically 
 
 The interface, prescriptions and agent replies are in Korean. English input is not supported yet.
 
-A hosted prototype runs at <https://cualign-proto.external.kr>, with access on request. You can also run it locally with the [Quickstart](quickstart.md).
+A hosted prototype is available on request. You can also run it locally with the [Quickstart](quickstart.md).
 
 ## What comes out
 

@@ -32,8 +32,8 @@ python3 -m http.server 8080   # 또는 npx --yes serve -l 8080 .
 
 ```sh
 gh run list --repo dalsoop/landing-mono --limit 3          # 최신 실행이 completed success인지
-curl -s -o /dev/null -w '%{http_code}\n' https://cualign.external.kr/            # 200
-curl -s -o /dev/null -w '%{http_code}\n' https://cualign.external.kr/_forms/cualign.json   # 404 (설정이 새지 않음)
+curl -s -o /dev/null -w '%{http_code}\n' https://cualign.ranode.usercontent.kr/            # 200
+curl -s -o /dev/null -w '%{http_code}\n' https://cualign.ranode.usercontent.kr/_forms/cualign.json   # 404 (설정이 새지 않음)
 ```
 
 다시 배포만 하려면 `gh workflow run deploy --repo dalsoop/landing-mono --ref main`을 쓴다. 배포를 되돌리려면 문제 커밋을 되돌리는 커밋을 `main`에 합친다. 되돌림 커밋도 같은 워크플로로 배포된다.
@@ -42,10 +42,10 @@ curl -s -o /dev/null -w '%{http_code}\n' https://cualign.external.kr/_forms/cual
 
 ## 새 사이트 추가
 
-1. 이름을 정한다. 소문자·숫자·하이픈, 앞뒤는 하이픈이 아니어야 하고, 이미 다른 서비스가 쓰는 `external.kr` 서브도메인과 겹치지 않아야 한다.
+1. 이름을 정한다. 소문자·숫자·하이픈, 앞뒤는 하이픈이 아니어야 하고, `ranode.usercontent.kr` 에 이미 있는 이름과 겹치지 않아야 한다. 로그인이나 쿠키가 필요한 사이트는 여기에 두지 않는다(결정 0004).
 2. `apps/<이름>/index.html`을 만든다. 없는 경로에 보여 줄 `404.html`과 `/styles.css`도 두는 편이 낫다(양식 오류 페이지가 `/styles.css`를 쓴다).
 3. 양식이 필요하면 `apps/<이름>/forms.json`에 폼을 적고, 폼의 `action`을 `/_forms/<폼>`으로 둔다.
-4. PR로 `main`에 합친다. 배포가 끝나면 `https://<이름>.external.kr`이 열린다. DNS 작업은 필요 없다(`*.external.kr` 와일드카드 프록시 레코드가 이미 있다).
+4. PR로 `main`에 합친다. 배포가 사용자 도메인을 붙이면 Cloudflare 가 DNS 레코드와 인증서를 만들고, 인증서가 발급되면(몇 분) `https://<이름>.ranode.usercontent.kr`이 열린다. DNS 작업은 필요 없다.
 
 ## 받은 양식 조회와 삭제
 
@@ -72,10 +72,11 @@ CLOUDFLARE_API_TOKEN=$CF_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CF_ACCOUNT_ID \
 
 | 이름 | 자리 | 뜻 |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | GitHub 저장소 시크릿 | 배포 토큰. `Workers Scripts: Edit`(계정), `Workers Routes: Edit`(external.kr zone) |
+| `CLOUDFLARE_API_TOKEN` | GitHub 저장소 시크릿 | 배포 토큰. Worker 올리기, usercontent.kr 사용자 도메인, external.kr 라우트(2026-12-10 까지) |
 | `CLOUDFLARE_ACCOUNT_ID` | GitHub 저장소 시크릿 | Cloudflare 계정 id |
 | `WORKER_NAME` | 워크플로 `env` | Worker 이름 `landing-mono` |
-| `ROOT_DOMAIN` | 워크플로 `env`, `router/worker.js` | `external.kr`. 두 곳을 함께 바꿔야 한다 |
+| `ROOT_DOMAIN` | 워크플로 `env`, `router/worker.js` | `ranode.usercontent.kr`. 두 곳을 함께 바꿔야 한다 |
+| `LEGACY_ROOT_DOMAIN` | 워크플로 `env`, `router/worker.js` | `external.kr`. 옛 이름의 301 넘겨주기 전용. 2026-12-10 에 두 곳과 워크플로의 라우트 블록을 지우고, Cloudflare 의 `cualign.external.kr` DNS 레코드(AAAA `100::`)를 지운다 |
 | R2 버킷 `landing-forms` | 워크플로가 만드는 `wrangler.json` | 바인딩 이름 `FORMS`. 버킷은 Cloudflare에 미리 있어야 한다 |
 | `CF_API_TOKEN`, `CF_ACCOUNT_ID` | 운영자 셸 | 양식 기록 조회·삭제용 |
-| `EULA_VERSION`, `LAUNCH_URL`, `DEMO_FORM_URL` | `apps/cualign/app.js` 상수 | 동의 버전, 프로토타입 주소, 데모 요청 주소(비우면 요청 버튼이 숨는다) |
+| `EULA_VERSION`, `LAUNCH_URL`, `DEMO_FORM_URL` | `apps/cualign/app.js` 상수 | 동의 버전, 프로토타입 주소(비우면 "Launch prototype" 버튼이 숨는다. 지금 비어 있음), 데모 요청 주소(비우면 요청 버튼이 숨는다) |
